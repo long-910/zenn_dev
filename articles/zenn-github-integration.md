@@ -4,6 +4,7 @@ emoji: "📚"
 type: "tech"
 topics: ["zenn", "github", "cli", "markdown"]
 published: true
+published_at: "2025-05-25 01:10"
 ---
 
 # Zenn と GitHub の連携方法と zenn-cli の使い方
