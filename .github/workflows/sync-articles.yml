@@ -1,0 +1,62 @@
+name: Sync Articles to GitHub Pages
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "articles/**"
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout source repository
+        uses: actions/checkout@v3
+
+      - name: Checkout target repository
+        uses: actions/checkout@v3
+        with:
+          repository: long-910/long-910.github.io
+          path: target
+          token: ${{ secrets.GH_PAT }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: "18"
+
+      - name: Install dependencies
+        run: |
+          npm install -g zenn-cli
+
+      - name: Process and sync articles
+        run: |
+          # 記事ファイルを処理
+          for file in articles/*.md; do
+            if [ -f "$file" ]; then
+              # ファイル名から日付を抽出（例：2024-03-21-article-title.md）
+              filename=$(basename "$file")
+              date_part=$(echo "$filename" | grep -oE '[0-9]{4}-[0-9]{2}-[0-9]{2}')
+              
+              if [ -n "$date_part" ]; then
+                # 新しいファイル名を生成（YYYY-MM-DD-title.md形式）
+                new_filename="${date_part}-$(echo "$filename" | sed "s/$date_part-//")"
+                
+                # フロントマターを変換
+                sed -i '1s/^---/---\nlayout: post\n/' "$file"
+                
+                # ファイルをコピー
+                cp "$file" "target/_posts/$new_filename"
+              fi
+            fi
+          done
+
+      - name: Commit and push changes
+        run: |
+          cd target
+          git config --global user.name "GitHub Actions"
+          git config --global user.email "actions@github.com"
+          git add _posts/
+          git commit -m "Sync articles from Zenn repository" || echo "No changes to commit"
+          git push
