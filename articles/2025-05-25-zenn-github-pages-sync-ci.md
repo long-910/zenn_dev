@@ -4,6 +4,7 @@ emoji: "🔄"
 type: "tech"
 topics: ["github", "ci", "github-actions", "zenn", "github-pages"]
 published: true
+published_at: "2025-05-25 02:10"
 ---
 
 # Zenn の記事を GitHub Pages に自動同期する CI の構築方法

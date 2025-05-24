@@ -64,9 +64,9 @@ jobs:
                   next;
                 }
                 if ($0 ~ /^emoji:/) {
-                  print "img_path: /assets/img/screenshots";
+                  print "img_path: /assets/img/logos";
                   print "image:";
-                  print "  path: zenn.png";
+                  print "  path: logo-only.svg";
                   print "  width: 100%";
                   print "  height: 100%";
                   print "  alt: Zenn";
@@ -87,7 +87,7 @@ jobs:
                 next;
               }
               frontmatter_done && !printed_link {
-                print "\n\n---\n\nこの記事は[Zenn](https://zenn.dev/long_910/articles/" substr(filename, 1, length(filename)-3) ")でも公開しています。";
+                print "\n\n---\n\nこの記事は[Zenn](https://zenn.dev/long910/articles/" substr(filename, 1, length(filename)-3) ")でも公開しています。";
                 printed_link = 1;
               }
               { print; }
