@@ -41,7 +41,57 @@ jobs:
               
               # フロントマターを変換
               temp_file=$(mktemp)
-              sed '1s/^---/---\nlayout: post\n/' "$file" > "$temp_file"
+              
+              # フロントマターの変換処理
+              awk '
+              BEGIN { in_frontmatter = 0; frontmatter_done = 0; }
+              /^---$/ {
+                if (!in_frontmatter) {
+                  in_frontmatter = 1;
+                  print "---";
+                  print "layout: post";
+                  next;
+                } else {
+                  in_frontmatter = 0;
+                  frontmatter_done = 1;
+                  print "---";
+                  next;
+                }
+              }
+              in_frontmatter {
+                if ($0 ~ /^title:/) {
+                  print $0;
+                  next;
+                }
+                if ($0 ~ /^emoji:/) {
+                  print "img_path: /assets/img/screenshots";
+                  print "image:";
+                  print "  path: zenn.png";
+                  print "  width: 100%";
+                  print "  height: 100%";
+                  print "  alt: Zenn";
+                  next;
+                }
+                if ($0 ~ /^type:/) {
+                  print "category: [Tech]";
+                  next;
+                }
+                if ($0 ~ /^topics:/) {
+                  print "tags: [" substr($0, 8) "]";
+                  next;
+                }
+                if ($0 ~ /^published_at:/) {
+                  print "date: " substr($0, 14);
+                  next;
+                }
+                next;
+              }
+              frontmatter_done && !printed_link {
+                print "\n\n---\n\nこの記事は[Zenn](https://zenn.dev/long_910/articles/" substr(filename, 1, length(filename)-3) ")でも公開しています。";
+                printed_link = 1;
+              }
+              { print; }
+              ' "$file" > "$temp_file"
               
               # 既存ファイルとの比較
               if [ -f "$target_file" ]; then
