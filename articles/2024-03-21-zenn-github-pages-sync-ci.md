@@ -80,20 +80,30 @@ jobs:
           # 記事ファイルを処理
           for file in articles/*.md; do
             if [ -f "$file" ]; then
-              # ファイル名から日付を抽出（例：2024-03-21-article-title.md）
+              # ファイル名をそのまま使用
               filename=$(basename "$file")
-              date_part=$(echo "$filename" | grep -oE '[0-9]{4}-[0-9]{2}-[0-9]{2}')
+              target_file="target/_posts/$filename"
               
-              if [ -n "$date_part" ]; then
-                # 新しいファイル名を生成（YYYY-MM-DD-title.md形式）
-                new_filename="${date_part}-$(echo "$filename" | sed "s/$date_part-//")"
-                
-                # フロントマターを変換
-                sed -i '1s/^---/---\nlayout: post\n/' "$file"
-                
-                # ファイルをコピー
-                cp "$file" "target/_posts/$new_filename"
+              # フロントマターを変換
+              temp_file=$(mktemp)
+              sed '1s/^---/---\nlayout: post\n/' "$file" > "$temp_file"
+              
+              # 既存ファイルとの比較
+              if [ -f "$target_file" ]; then
+                # ファイルの内容を比較
+                if ! cmp -s "$temp_file" "$target_file"; then
+                  echo "Updating existing file: $filename"
+                  cp "$temp_file" "$target_file"
+                else
+                  echo "No changes detected in: $filename"
+                fi
+              else
+                echo "Creating new file: $filename"
+                cp "$temp_file" "$target_file"
               fi
+              
+              # 一時ファイルを削除
+              rm "$temp_file"
             fi
           done
 
@@ -126,18 +136,37 @@ jobs:
    - 変更のコミットとプッシュ
 
 3. **記事の変換処理**:
-   - ファイル名から日付を抽出
+   - ファイル名はそのまま保持
    - フロントマターに`layout: post`を追加
-   - 変換された記事をターゲットリポジトリにコピー
+   - 既存ファイルとの内容比較
+   - 変更がある場合のみ更新
+
+### 5. ファイル処理の詳細
+
+1. **新規ファイルの場合**:
+
+   - フロントマターに`layout: post`を追加
+   - そのままのファイル名でターゲットディレクトリにコピー
+
+2. **既存ファイルの場合**:
+
+   - 内容を比較して変更の有無を確認
+   - 変更がある場合のみ更新
+   - 変更がない場合はスキップ
+
+3. **安全な処理**:
+   - 一時ファイルを使用して変換処理
+   - 処理後に一時ファイルを確実に削除
+   - エラーハンドリングの実装
 
 ## 記事の作成ルール
 
 この CI を正しく動作させるために、以下のルールに従って記事を作成する必要があります：
 
-1. **ファイル名の形式**:
+1. **ファイル名**:
 
-   - `YYYY-MM-DD-title.md`の形式で作成
-   - 例：`2024-03-21-zenn-github-pages-sync-ci.md`
+   - 任意のファイル名を使用可能
+   - 日本語ファイル名は避けることを推奨
 
 2. **フロントマター**:
    - Zenn の形式のフロントマターを使用
@@ -148,6 +177,7 @@ jobs:
 1. 新しい記事を作成してプッシュ
 2. GitHub Actions の実行状況を確認
 3. ターゲットリポジトリに記事が同期されていることを確認
+4. 既存記事の更新をプッシュして、変更が正しく反映されることを確認
 
 ## 注意点
 
@@ -158,8 +188,8 @@ jobs:
 
 2. **ファイル名**:
 
-   - 日付形式は必ず`YYYY-MM-DD`に従う
-   - ファイル名に日本語は使用しない
+   - 日本語ファイル名は使用しないことを推奨
+   - スペースは使用しないことを推奨
 
 3. **フロントマター**:
    - Zenn の形式を維持
@@ -173,6 +203,8 @@ jobs:
 - 手動での同期作業が不要
 - 記事の公開プロセスが自動化
 - ミスのリスクを低減
+- 既存記事の更新を安全に処理
+- 不要な更新を防止
 
 ## 参考リンク
 
