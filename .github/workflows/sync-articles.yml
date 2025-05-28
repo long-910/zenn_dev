@@ -34,7 +34,7 @@ jobs:
               temp_file=$(mktemp)
               
               # フロントマターの変換処理
-              awk '
+              awk -v filename="$filename" '
               BEGIN { in_frontmatter = 0; frontmatter_done = 0; }
               /^---$/ {
                 if (!in_frontmatter) {
@@ -78,8 +78,7 @@ jobs:
                 next;
               }
               frontmatter_done && !printed_link {
-                print "\n\n---\n\n";
-                print "この記事は[Zenn](https://zenn.dev/long910/articles/" substr(filename, 1, length(filename)-3) ")でも公開しています。";
+                print "\n\n---\n\nこの記事は[Zenn](https://zenn.dev/long910/articles/"substr(filename, 1, length(filename)-3)")でも公開しています。";
                 printed_link = 1;
               }
               { print; }
