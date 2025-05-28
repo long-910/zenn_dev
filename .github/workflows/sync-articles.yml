@@ -78,7 +78,8 @@ jobs:
                 next;
               }
               frontmatter_done && !printed_link {
-                print "\n\n---\n\nこの記事は[Zenn](https://zenn.dev/long910/articles/"substr(filename, 1, length(filename)-3)")でも公開しています。";
+                print "\n\n---\n\n";
+                print "この記事は[Zenn](https://zenn.dev/long910/articles/" substr(filename, 1, length(filename)-3) ")でも公開しています。";
                 printed_link = 1;
               }
               { print; }
