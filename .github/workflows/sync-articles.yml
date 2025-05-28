@@ -21,15 +21,6 @@ jobs:
           path: target
           token: ${{ secrets.GH_PAT }}
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: "18"
-
-      - name: Install dependencies
-        run: |
-          npm install -g zenn-cli
-
       - name: Process and sync articles
         run: |
           # 記事ファイルを処理
@@ -77,17 +68,17 @@ jobs:
                   next;
                 }
                 if ($0 ~ /^topics:/) {
-                  print "tags: [" substr($0, 8) "]";
+                  print "tags:" substr($0, 8);
                   next;
                 }
                 if ($0 ~ /^published_at:/) {
-                  print "date: " substr($0, 14);
+                  print "date:" substr($0, 14);
                   next;
                 }
                 next;
               }
               frontmatter_done && !printed_link {
-                print "\n\n---\n\nこの記事は[Zenn](https://zenn.dev/long910/articles/" substr(filename, 1, length(filename)-3) ")でも公開しています。";
+                print "\n\n---\n\nこの記事は[Zenn](https://zenn.dev/long910/articles/"substr(filename, 1, length(filename)-3)")でも公開しています。";
                 printed_link = 1;
               }
               { print; }
