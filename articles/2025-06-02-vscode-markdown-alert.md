@@ -28,18 +28,38 @@ GitHub のドキュメントでは、重要な情報を目立たせるために�
 
 ## インストール方法
 
+### VSCode 拡張機能タブからインストール
+
 1. VSCode を開く
 2. 拡張機能タブ（Ctrl+Shift+X）を開く
 3. 検索バーに「Markdown Preview for Github Alerts」と入力
 4. インストールボタンをクリック
 
+### Marketplace から直接インストール
+
+1. [Visual Studio Marketplace](https://marketplace.visualstudio.com/items?itemName=yahyabatulu.vscode-markdown-alert)にアクセス
+2. 「Install」ボタンをクリック
+3. VSCode が自動的に起動し、インストールの確認ダイアログが表示される
+4. 「Install」をクリックしてインストールを完了
+
+### コマンドラインからインストール
+
+```bash
+code --install-extension yahyabatulu.vscode-markdown-alert
+```
+
 > [!TIP]
 > インストール後、VSCode の再起動は必要ありません。すぐに使用を開始できます。
+
+表示例：
+
+![](https://storage.googleapis.com/zenn-user-upload/5e80168ca2c5-20250602.png)
 
 ## 基本的な使い方
 
 以下のような構文でアラートを作成できます：
 
+```markdown
 > [!NOTE]
 > これは注意書きです。一般的な情報や補足説明に使用します。
 
@@ -54,6 +74,11 @@ GitHub のドキュメントでは、重要な情報を目立たせるために�
 
 > [!CAUTION]
 > これは注意喚起です。特に慎重な対応が必要な場合に使用します。
+```
+
+表示例：
+
+![](https://storage.googleapis.com/zenn-user-upload/ad0fbcaa9d1d-20250602.png)
 
 ## アラートのカスタマイズ
 
@@ -109,6 +134,10 @@ VSCode のスニペット機能を使用して、アラートを素早く挿入�
 > 本番環境では必ず環境変数を設定してください。
 ```
 
+表示例：
+
+![](https://storage.googleapis.com/zenn-user-upload/03cef5f20240-20250602.png)
+
 ### API ドキュメントでの使用例
 
 ```markdown
@@ -123,6 +152,10 @@ VSCode のスニペット機能を使用して、アラートを素早く挿入�
 > [!TIP]
 > エラーハンドリングの実装例は `examples/` ディレクトリを参照してください。
 ```
+
+表示例：
+
+![](https://storage.googleapis.com/zenn-user-upload/15381ea8807d-20250602.png)
 
 ## トラブルシューティング
 
