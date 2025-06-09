@@ -6,6 +6,7 @@ on:
       - main
     paths:
       - "articles/**"
+      - ".github/sync-config.json"
 
 jobs:
   sync:
@@ -23,11 +24,30 @@ jobs:
 
       - name: Process and sync articles
         run: |
+          # 除外設定を読み込む
+          exclude_articles=($(jq -r '.exclude_articles[]' .github/sync-config.json))
+          
           # 記事ファイルを処理
           for file in articles/*.md; do
             if [ -f "$file" ]; then
-              # ファイル名をそのまま使用
+              # ファイル名を取得
               filename=$(basename "$file")
+              
+              # 除外対象かチェック
+              is_excluded=false
+              for excluded in "${exclude_articles[@]}"; do
+                if [ "$filename" = "$excluded" ]; then
+                  echo "Skipping excluded article: $filename"
+                  is_excluded=true
+                  break
+                fi
+              done
+              
+              if [ "$is_excluded" = true ]; then
+                continue
+              fi
+              
+              # 以下、既存の処理を続行
               target_file="target/_posts/$filename"
               
               # フロントマターを変換
