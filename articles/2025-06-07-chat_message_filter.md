@@ -7,7 +7,7 @@ published: true
 published_at: "2025-06-07 12:00"
 ---
 
-# Google Chat と Slack に通知(フィルター付き)を送る Webhook テストテストシステムの構築
+# Google Chat と Slack に通知(フィルター付き)を送る Webhook テストシステムの構築
 
 ## はじめに
 
