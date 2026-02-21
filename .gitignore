@@ -2,3 +2,4 @@ node_modules
 .DS_Store
 # SpecStory explanation file
 .specstory/*
+.claude/settings.local.json
