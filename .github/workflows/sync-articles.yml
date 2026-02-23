@@ -26,7 +26,7 @@ jobs:
         run: |
           # 除外設定を読み込む
           exclude_articles=($(jq -r '.exclude_articles[]' .github/sync-config.json))
-          
+
           # 記事ファイルを処理
           for file in articles/*.md; do
             if [ -f "$file" ]; then
@@ -54,21 +54,45 @@ jobs:
               temp_file=$(mktemp)
               
               # フロントマターの変換処理
-              awk -v filename="$filename" '
-              BEGIN { in_frontmatter = 0; frontmatter_done = 0; }
+              awk -v filename="$(basename "$file")" '
+              BEGIN {
+                in_frontmatter = 0;
+                frontmatter_done = 0;
+                printed_link = 0;
+              }
+              
+              # 1. フロントマターの処理
               /^---$/ {
+                if (frontmatter_done) {
+                  # すでにフロントマターが終わっている場合は、ただの水平線として出力
+                  print "---";
+                  next;
+                }
+
                 if (!in_frontmatter) {
+                  # フロントマター開始
                   in_frontmatter = 1;
                   print "---";
                   print "layout: post";
                   next;
                 } else {
+                  # フロントマター終了
                   in_frontmatter = 0;
                   frontmatter_done = 1;
                   print "---";
+                  
+                  # フロントマター直後にリンクを挿入
+                  if (!printed_link) {
+                    # 拡張子を除いたファイル名を取得
+                    slug = filename; sub(/\.[^.]+$/, "", slug);
+                    printf "\n\n---\n\nこの記事は[Zenn](https://zenn.dev/long910/articles/%s)でも公開しています。\n\n", slug;
+                    printed_link = 1;
+                  }
                   next;
                 }
               }
+              
+              # 2. フロントマター内部の書き換え
               in_frontmatter {
                 if ($0 ~ /^title:/) {
                   print $0;
@@ -95,13 +119,18 @@ jobs:
                   print "date:" substr($0, 14);
                   next;
                 }
+                # published: true などの不要な行を除去したい場合はここでnext
+                if ($0 ~ /^published:/) {
+                  next;
+                }
                 next;
               }
-              frontmatter_done && !printed_link {
-                print "\n\n---\n\nこの記事は[Zenn](https://zenn.dev/long910/articles/"substr(filename, 1, length(filename)-3)")でも公開しています。";
-                printed_link = 1;
+              
+              # 3. 本文の出力
+              {
+                # フロントマター外の行はすべてそのまま出力
+                print $0;
               }
-              { print; }
               ' "$file" > "$temp_file"
               
               # 既存ファイルとの比較
