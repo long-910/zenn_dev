@@ -41,6 +41,18 @@ published_at: "2025-05-25 01:10"
 - `published: false` keeps the article as a draft on Zenn
 - `published_at` controls the display date/time
 
+## Article Writing Rules
+
+**REQUIRED**: Every article must include the following message block immediately after the frontmatter (before the first heading or body text):
+
+```markdown
+:::message
+この記事は **Claude Code**（claude.ai/code）を使用して作成しました。
+:::
+```
+
+This must be present in all articles without exception.
+
 ## GitHub Pages Sync
 
 On push to `main`, the workflow `.github/workflows/sync-articles.yml` automatically:
