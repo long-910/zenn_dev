@@ -7,10 +7,6 @@ published: false
 published_at: "2026-03-15 15:00"
 ---
 
-:::message
-この記事は **Claude Code**（claude.ai/code）を使用して作成しました。
-:::
-
 ## 背景
 
 Zenn記事の同期先として GitHub Pages・Qiita・はてなブログ・note.com への自動投稿を構築してきました。

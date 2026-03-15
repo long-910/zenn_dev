@@ -7,10 +7,6 @@ published: true
 published_at: "2026-03-15 16:00"
 ---
 
-:::message
-この記事は **Claude Code**（claude.ai/code）を使用して作成しました。
-:::
-
 ## TL;DR
 
 `git push` 1回で Zenn の記事を **Qiita・はてなブログ・note.com** に自動配信できる仕組みを作りました。設定ファイル（JSON）でどこに送るかをコードで管理できます。

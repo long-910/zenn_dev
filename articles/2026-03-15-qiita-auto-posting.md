@@ -7,10 +7,6 @@ published: false
 published_at: "2026-03-15 13:00"
 ---
 
-:::message
-この記事は **Claude Code**（claude.ai/code）を使用して作成しました。
-:::
-
 ## はじめに
 
 Zennで記事を書いてGitHubにpushするだけで、**Qiitaにも自動で同じ内容が投稿される**仕組みを作りました。

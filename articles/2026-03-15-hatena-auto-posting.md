@@ -7,10 +7,6 @@ published: false
 published_at: "2026-03-15 14:00"
 ---
 
-:::message
-この記事は **Claude Code**（claude.ai/code）を使用して作成しました。
-:::
-
 ## はじめに
 
 [Qiita自動同期](https://zenn.dev/long910/articles/2026-03-15-qiita-auto-posting) に続いて、今回は **はてなブログへの自動投稿** を追加しました。

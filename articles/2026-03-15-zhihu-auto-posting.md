@@ -7,10 +7,6 @@ published: true
 published_at: "2026-03-15 12:00"
 ---
 
-:::message
-この記事は **Claude Code**（claude.ai/code）を使用して作成しました。
-:::
-
 :::message alert
 **この記事は構想・設計段階のメモです**
 
