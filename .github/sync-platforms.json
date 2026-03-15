@@ -1,0 +1,22 @@
+{
+  "platforms": {
+    "github_pages": {
+      "enabled": true,
+      "exclude_articles": [
+        "2025-06-06-yazi.md"
+      ]
+    },
+    "qiita": {
+      "enabled": false,
+      "exclude_articles": []
+    },
+    "hatena": {
+      "enabled": false,
+      "exclude_articles": []
+    },
+    "zhihu": {
+      "enabled": false,
+      "exclude_articles": []
+    }
+  }
+}

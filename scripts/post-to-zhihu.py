@@ -44,6 +44,22 @@ REPO_ROOT = SCRIPTS_DIR.parent
 POSTED_TRACKING_FILE = SCRIPTS_DIR / "zhihu-posted.json"
 ARTICLES_DIR = REPO_ROOT / "articles"
 ZENN_USER = "long910"
+PLATFORM_NAME = "zhihu"
+SYNC_PLATFORMS_FILE = REPO_ROOT / ".github" / "sync-platforms.json"
+
+
+def is_excluded(filename: str) -> bool:
+    """sync-platforms.json の exclude_articles に含まれるか確認する"""
+    if not SYNC_PLATFORMS_FILE.exists():
+        return False
+    with open(SYNC_PLATFORMS_FILE) as f:
+        config = json.load(f)
+    exclude_list = (
+        config.get("platforms", {})
+        .get(PLATFORM_NAME, {})
+        .get("exclude_articles", [])
+    )
+    return filename in exclude_list
 
 
 def load_posted_articles() -> dict:
@@ -286,6 +302,11 @@ def post_article(
         return None
 
     filename = path.name
+
+    if is_excluded(filename):
+        print(f"  スキップ（sync-platforms.json で除外）: {filename}")
+        return None
+
     posted_articles = load_posted_articles()
 
     if filename in posted_articles and not force:
