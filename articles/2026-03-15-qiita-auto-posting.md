@@ -3,7 +3,7 @@ title: "Zenn記事をQiitaに自動で同期投稿する仕組みを作った【
 emoji: "📡"
 type: "tech"
 topics: ["qiita", "githubactions", "python", "automation", "zenn"]
-published: true
+published: false
 published_at: "2026-03-15 13:00"
 ---
 
