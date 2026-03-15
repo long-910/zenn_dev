@@ -9,7 +9,7 @@ on:
       - ".github/sync-platforms.json"
 
 concurrency:
-  group: tracking-file-update
+  group: post-to-zhihu-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
@@ -68,6 +68,9 @@ jobs:
             echo "追跡ファイルに変更なし"
           else
             git commit -m "chore: Update Zhihu posting tracking [skip ci]"
-            git pull --rebase origin main
-            git push origin main
+            for i in 1 2 3 4 5; do
+              git pull --rebase origin main && git push origin main && break
+              echo "push失敗、リトライ $i/5"
+              sleep $((i * 3))
+            done
           fi
