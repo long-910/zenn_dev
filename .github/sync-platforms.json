@@ -19,7 +19,7 @@
       "exclude_articles": []
     },
     "note": {
-      "enabled": true,
+      "enabled": false,
       "exclude_articles": []
     }
   }
