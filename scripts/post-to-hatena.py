@@ -30,6 +30,7 @@ import base64
 import xml.etree.ElementTree as ET
 
 import frontmatter
+import markdown as md_lib
 
 SCRIPTS_DIR = Path(__file__).parent
 REPO_ROOT = SCRIPTS_DIR.parent
@@ -156,6 +157,14 @@ def add_zenn_crosslink(content: str, zenn_slug: str) -> str:
     return content + f"\n\n---\n\n> この記事は[Zenn]({zenn_url})でも公開しています。"
 
 
+def convert_markdown_to_html(content: str) -> str:
+    """MarkdownをHTML変換する"""
+    return md_lib.markdown(
+        content,
+        extensions=["tables", "fenced_code", "nl2br", "sane_lists"],
+    )
+
+
 def build_atom_entry(
     title: str,
     content: str,
@@ -176,8 +185,8 @@ def build_atom_entry(
     name.text = os.environ.get("HATENA_ID", "")
 
     content_el = ET.SubElement(entry, "{http://www.w3.org/2005/Atom}content")
-    content_el.set("type", "text/x-markdown")
-    content_el.text = content
+    content_el.set("type", "text/html")
+    content_el.text = convert_markdown_to_html(content)
 
     for cat in categories:
         cat_el = ET.SubElement(entry, "{http://www.w3.org/2005/Atom}category")
