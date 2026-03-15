@@ -12,5 +12,12 @@
     "title": "uv完全ガイド：pip・poetry・pyenvをすべて置き換えるPythonパッケージマネージャー",
     "posted_at": "2026-03-15T08:00:32Z",
     "updated_at": "2026-03-15T08:00:32Z"
+  },
+  "2026-02-28-vscode-claude-status.md": {
+    "url": "https://long910.hatenablog.com/entry/2026/03/15/173643",
+    "entry_url": "https://blog.hatena.ne.jp/long910/long910.hatenablog.com/atom/entry/17179246901365175556",
+    "title": "Claude Code の使用量をVS Codeのステータスバーでリアルタイム監視する「vscode-claude-status」を作った",
+    "posted_at": "2026-03-15T08:36:43Z",
+    "updated_at": "2026-03-15T08:36:43Z"
   }
 }
