@@ -1,10 +1,28 @@
 #!/usr/bin/env python3
 """
-Zenn記事をnote.comに投稿するスクリプト（非公式API使用）
+Zenn記事をnote.comに投稿するスクリプト（非公式内部API使用）
 
 ⚠️  注意: note.comは公式APIを公開していません。
-    このスクリプトはリバースエンジニアリングされた内部APIを使用しており、
-    仕様変更により予告なく動作しなくなる可能性があります。
+    このスクリプトはコミュニティによってリバースエンジニアリングされた
+    内部REST APIを直接呼び出します。UIが変わると予告なく壊れる可能性があります。
+
+【実装方式について】
+    note.comへの自動投稿には2つのアプローチが存在します：
+
+    1. 直接HTTP API（このスクリプトの方式）
+       - note.com の内部 REST API を直接呼び出す
+       - 軽量・高速・ブラウザ不要
+       - エンドポイント変更で壊れるリスクあり
+
+    2. NoteClient ライブラリ（pip install NoteClient）
+       - Selenium WebDriver によるブラウザ自動化方式
+       - Chrome/Firefox が必要（GitHub Actions では追加インストール要）
+       - UI変更でも比較的修復しやすい
+       - 動作が遅くリソース消費が大きい
+       - 参考: https://github.com/Mr-SuperInsane/NoteClient
+
+    GitHub Actions での自動化には直接HTTPの方が軽量なため、
+    このスクリプトでは方式1を採用しています。
 
 使い方:
   python scripts/post-to-note.py articles/2026-03-15-my-article.md

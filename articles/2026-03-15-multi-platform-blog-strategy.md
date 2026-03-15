@@ -58,7 +58,11 @@ note.comに対しては追加で詳しく調査しました。
 
 note.comは一切の公式APIドキュメントを公開していません。しかし、日本のエンジニアコミュニティが内部APIをリバースエンジニアリングした記録が複数存在します。
 
-主要エンドポイント（コミュニティ調査結果）：
+### 自動投稿の2つのアプローチ
+
+#### アプローチ1：直接HTTP API（今回採用）
+
+コミュニティが解析した内部REST APIを直接呼び出す方法です。
 
 ```
 # ログイン
@@ -80,16 +84,36 @@ PATCH https://note.com/api/v1/text_notes/{id}
 Body: {"status": "published"}
 ```
 
-### note.comへの投稿に使える既存ライブラリ
+**メリット**: 軽量・高速・ブラウザ不要・GitHub Actionsとの相性が良い
+**デメリット**: APIエンドポイント変更で突然壊れる可能性がある
 
-コミュニティが開発したPythonライブラリが存在します：
+#### アプローチ2：NoteClient（Seleniumブラウザ自動化）
 
-- **NoteClient** (PyPI: `pip install NoteClient`)
-  - MIT ライセンス
-  - Markdown形式で記事を投稿可能
-  - メールアドレス・パスワード・ユーザーIDで認証
+`pip install NoteClient` でインストールできるコミュニティ製ライブラリ（MIT）です。
 
-ただし今回は外部ライブラリへの依存を減らすため、直接APIを呼び出す実装にしました。
+```python
+from note_client import Note
+
+note = Note(
+    email="your@email.com",
+    password="your_password",
+    user_id="12345"  # 数値のユーザーID
+)
+
+result = note.create_article(
+    title="記事タイトル",
+    content_body="## Markdown本文...",  # 直接文字列も渡せる
+    input_tag_list=["python", "automation"],
+    post_setting=True,   # True=即時公開, False=下書き
+    headless=True,       # ヘッドレスモード
+)
+# result["post_url"] → 公開URL
+```
+
+**メリット**: UI変更に対してHTTPより修復しやすい。`janome`（日本語形態素解析）でタグを自動抽出する機能もある
+**デメリット**: Chrome/Firefoxが必要。GitHub Actionsでは追加インストールが必要。処理が遅くリソース消費が大きい
+
+**今回はアプローチ1（直接HTTP）を採用**しました。GitHub Actionsでブラウザなしに動き、requirements.txtへの追加依存も不要なためです。
 
 ### note.comの利用規約について
 
