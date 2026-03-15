@@ -272,16 +272,12 @@ class HatenaClient:
         root = ET.fromstring(xml_str)
         result = {}
 
-        # id (entry URL)
-        id_el = root.find("{http://www.w3.org/2005/Atom}id")
-        if id_el is not None:
-            result["entry_url"] = id_el.text
-
-        # alternate link (公開URL)
         for link in root.findall("{http://www.w3.org/2005/Atom}link"):
-            if link.get("rel") == "alternate":
+            rel = link.get("rel")
+            if rel == "edit":
+                result["entry_url"] = link.get("href")
+            elif rel == "alternate":
                 result["url"] = link.get("href")
-                break
 
         return result
 
