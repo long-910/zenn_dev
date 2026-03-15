@@ -7,11 +7,11 @@
       ]
     },
     "qiita": {
-      "enabled": false,
+      "enabled": true,
       "exclude_articles": []
     },
     "hatena": {
-      "enabled": false,
+      "enabled": true,
       "exclude_articles": []
     },
     "zhihu": {
@@ -19,7 +19,7 @@
       "exclude_articles": []
     },
     "note": {
-      "enabled": false,
+      "enabled": true,
       "exclude_articles": []
     }
   }
