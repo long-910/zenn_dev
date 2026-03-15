@@ -137,6 +137,14 @@ def convert_zenn_to_hatena(content: str) -> str:
     # SlideShare埋め込みを除去
     content = re.sub(r"@\[slideshare\]\([^)]+\)", "[SlideShare]", content)
 
+    # mermaidブロックをZenn参照に変換（はてなは非対応）
+    content = re.sub(
+        r"```mermaid\n.*?```",
+        "*（図はZenn記事をご覧ください）*",
+        content,
+        flags=re.DOTALL,
+    )
+
     # 連続する空行を最大2行に圧縮
     content = re.sub(r"\n{3,}", "\n\n", content)
 

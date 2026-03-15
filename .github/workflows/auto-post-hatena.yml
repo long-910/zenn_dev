@@ -7,6 +7,16 @@ on:
     paths:
       - "articles/*.md"
       - ".github/sync-platforms.json"
+  workflow_dispatch:
+    inputs:
+      force:
+        description: "投稿済み記事も強制更新する (--force)"
+        type: boolean
+        default: false
+      article:
+        description: "対象記事ファイル名 (例: 2026-03-13-claude-code-hooks.md)"
+        type: string
+        default: ""
 
 concurrency:
   group: post-to-hatena-${{ github.ref }}
@@ -43,7 +53,11 @@ jobs:
         if: steps.config.outputs.enabled == 'true'
         id: changed
         run: |
-          CHANGED=$(git diff --name-only --diff-filter=ACM HEAD~1 HEAD -- 'articles/*.md' | tr '\n' ' ')
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ -n "${{ inputs.article }}" ]; then
+            CHANGED="articles/${{ inputs.article }}"
+          else
+            CHANGED=$(git diff --name-only --diff-filter=ACM HEAD~1 HEAD -- 'articles/*.md' | tr '\n' ' ')
+          fi
           echo "files=$CHANGED" >> "$GITHUB_OUTPUT"
           echo "変更された記事: $CHANGED"
 
@@ -54,9 +68,13 @@ jobs:
           HATENA_BLOG_ID: ${{ secrets.HATENA_BLOG_ID }}
           HATENA_API_KEY: ${{ secrets.HATENA_API_KEY }}
         run: |
+          FORCE_FLAG=""
+          if [ "${{ inputs.force }}" = "true" ]; then
+            FORCE_FLAG="--force"
+          fi
           for file in ${{ steps.changed.outputs.files }}; do
             echo "投稿中: $file"
-            python scripts/post-to-hatena.py "$file" || echo "警告: $file の投稿に失敗しました"
+            python scripts/post-to-hatena.py $FORCE_FLAG "$file" || echo "警告: $file の投稿に失敗しました"
           done
 
       - name: Commit updated tracking file
