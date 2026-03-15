@@ -8,6 +8,10 @@ on:
       - "articles/*.md"
       - ".github/sync-platforms.json"
 
+concurrency:
+  group: tracking-file-update
+  cancel-in-progress: false
+
 jobs:
   post-to-zhihu:
     runs-on: ubuntu-latest
@@ -64,5 +68,6 @@ jobs:
             echo "追跡ファイルに変更なし"
           else
             git commit -m "chore: Update Zhihu posting tracking [skip ci]"
+            git pull --rebase origin main
             git push origin main
           fi
