@@ -19,5 +19,12 @@
     "title": "Claude Code の使用量をVS Codeのステータスバーでリアルタイム監視する「vscode-claude-status」を作った",
     "posted_at": "2026-03-15T08:36:45Z",
     "updated_at": "2026-03-15T08:36:45Z"
+  },
+  "2026-02-23-claude-tmux-status.md": {
+    "url": "https://qiita.com/long-910/items/4184fac2a699020dc58f",
+    "item_id": "4184fac2a699020dc58f",
+    "title": "Claude Code の使用量をtmuxのステータスバーでリアルタイム監視する「claude-tmux-status」を作った",
+    "posted_at": "2026-03-15T08:38:16Z",
+    "updated_at": "2026-03-15T08:38:16Z"
   }
 }
