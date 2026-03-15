@@ -6,7 +6,7 @@ on:
       - main
     paths:
       - "articles/**"
-      - ".github/sync-config.json"
+      - ".github/sync-platforms.json"
 
 jobs:
   sync:
@@ -15,7 +15,14 @@ jobs:
       - name: Checkout source repository
         uses: actions/checkout@v3
 
+      - name: Check if GitHub Pages sync is enabled
+        id: config
+        run: |
+          ENABLED=$(jq -r '.platforms.github_pages.enabled' .github/sync-platforms.json)
+          echo "enabled=$ENABLED" >> "$GITHUB_OUTPUT"
+
       - name: Checkout target repository
+        if: steps.config.outputs.enabled == 'true'
         uses: actions/checkout@v3
         with:
           repository: long-910/long-910.github.io
@@ -23,9 +30,10 @@ jobs:
           token: ${{ secrets.GH_PAT }}
 
       - name: Process and sync articles
+        if: steps.config.outputs.enabled == 'true'
         run: |
           # 除外設定を読み込む
-          exclude_articles=($(jq -r '.exclude_articles[]' .github/sync-config.json))
+          exclude_articles=($(jq -r '.platforms.github_pages.exclude_articles[]' .github/sync-platforms.json))
 
           # 記事ファイルを処理
           for file in articles/*.md; do

@@ -1,0 +1,67 @@
+name: Auto Post to Qiita
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "articles/*.md"
+      - ".github/sync-platforms.json"
+
+jobs:
+  post-to-qiita:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+          token: ${{ secrets.GH_PAT }}
+
+      - name: Check if Qiita posting is enabled
+        id: config
+        run: |
+          ENABLED=$(jq -r '.platforms.qiita.enabled' .github/sync-platforms.json)
+          echo "enabled=$ENABLED" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Python
+        if: steps.config.outputs.enabled == 'true'
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        if: steps.config.outputs.enabled == 'true'
+        run: pip install -r scripts/requirements.txt
+
+      - name: Find newly added or modified articles
+        if: steps.config.outputs.enabled == 'true'
+        id: changed
+        run: |
+          CHANGED=$(git diff --name-only --diff-filter=ACM HEAD~1 HEAD -- 'articles/*.md' | tr '\n' ' ')
+          echo "files=$CHANGED" >> "$GITHUB_OUTPUT"
+          echo "変更された記事: $CHANGED"
+
+      - name: Post articles to Qiita
+        if: steps.config.outputs.enabled == 'true' && steps.changed.outputs.files != ''
+        env:
+          QIITA_TOKEN: ${{ secrets.QIITA_TOKEN }}
+        run: |
+          for file in ${{ steps.changed.outputs.files }}; do
+            echo "投稿中: $file"
+            python scripts/post-to-qiita.py "$file" || echo "警告: $file の投稿に失敗しました"
+          done
+
+      - name: Commit updated tracking file
+        if: steps.config.outputs.enabled == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add scripts/qiita-posted.json
+          if git diff --staged --quiet; then
+            echo "追跡ファイルに変更なし"
+          else
+            git commit -m "chore: Update Qiita posting tracking [skip ci]"
+            git push origin main
+          fi
