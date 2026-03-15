@@ -8,15 +8,18 @@ on:
         required: false
         type: string
         default: ""
-      platform:
-        description: "同期先プラットフォーム"
-        type: choice
-        options:
-          - all
-          - qiita
-          - hatena
-          - zhihu
-        default: all
+      sync_qiita:
+        description: "Qiitaに同期する"
+        type: boolean
+        default: true
+      sync_hatena:
+        description: "はてなブログに同期する"
+        type: boolean
+        default: true
+      sync_zhihu:
+        description: "Zhihuに同期する"
+        type: boolean
+        default: false
       force:
         description: "投稿済み記事も強制更新する（重複投稿注意）"
         type: boolean
@@ -24,7 +27,7 @@ on:
 
 jobs:
   sync-qiita:
-    if: inputs.platform == 'all' || inputs.platform == 'qiita'
+    if: inputs.sync_qiita == true
     runs-on: ubuntu-latest
     concurrency:
       group: post-to-qiita-manual
@@ -84,7 +87,7 @@ jobs:
           fi
 
   sync-hatena:
-    if: inputs.platform == 'all' || inputs.platform == 'hatena'
+    if: inputs.sync_hatena == true
     runs-on: ubuntu-latest
     concurrency:
       group: post-to-hatena-manual
@@ -146,7 +149,7 @@ jobs:
           fi
 
   sync-zhihu:
-    if: inputs.platform == 'all' || inputs.platform == 'zhihu'
+    if: inputs.sync_zhihu == true
     runs-on: ubuntu-latest
     concurrency:
       group: post-to-zhihu-manual
