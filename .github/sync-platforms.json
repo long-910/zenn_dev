@@ -17,6 +17,10 @@
     "zhihu": {
       "enabled": false,
       "exclude_articles": []
+    },
+    "note": {
+      "enabled": false,
+      "exclude_articles": []
     }
   }
 }
