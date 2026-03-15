@@ -12,5 +12,12 @@
     "title": "uv完全ガイド：pip・poetry・pyenvをすべて置き換えるPythonパッケージマネージャー",
     "posted_at": "2026-03-15T08:00:29Z",
     "updated_at": "2026-03-15T08:00:29Z"
+  },
+  "2026-02-28-vscode-claude-status.md": {
+    "url": "https://qiita.com/long-910/items/8088f7ac362a07856f54",
+    "item_id": "8088f7ac362a07856f54",
+    "title": "Claude Code の使用量をVS Codeのステータスバーでリアルタイム監視する「vscode-claude-status」を作った",
+    "posted_at": "2026-03-15T08:36:45Z",
+    "updated_at": "2026-03-15T08:36:45Z"
   }
 }
