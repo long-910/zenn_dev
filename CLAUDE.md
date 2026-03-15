@@ -43,7 +43,7 @@ published_at: "2025-05-25 01:10"
 
 ## Article Writing Rules
 
-**DO NOT** include the following message block in any article:
+**REQUIRED**: Every article must include the following message block immediately after the frontmatter (before the first heading or body text):
 
 ```markdown
 :::message
@@ -51,7 +51,7 @@ published_at: "2025-05-25 01:10"
 :::
 ```
 
-This block must **not** be added to any article.
+This must be present in all articles without exception.
 
 ## GitHub Pages Sync
 
