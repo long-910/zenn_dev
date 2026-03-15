@@ -5,5 +5,12 @@
     "title": "Claude Code Hooks完全ガイド：ファイル保存でテスト自動実行・Slack通知まで",
     "posted_at": "2026-03-15T07:46:19Z",
     "updated_at": "2026-03-15T07:46:19Z"
+  },
+  "2026-03-13-uv-python.md": {
+    "url": "https://long910.hatenablog.com/entry/2026/03/15/170031",
+    "entry_url": "https://blog.hatena.ne.jp/long910/long910.hatenablog.com/atom/entry/17179246901365163362",
+    "title": "uv完全ガイド：pip・poetry・pyenvをすべて置き換えるPythonパッケージマネージャー",
+    "posted_at": "2026-03-15T08:00:32Z",
+    "updated_at": "2026-03-15T08:00:32Z"
   }
 }
