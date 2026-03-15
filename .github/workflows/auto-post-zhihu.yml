@@ -1,0 +1,60 @@
+name: Auto Post to Zhihu
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "articles/*.md"
+
+jobs:
+  post-to-zhihu:
+    runs-on: ubuntu-latest
+    # ZHIHU_COOKIE と ANTHROPIC_API_KEY が設定されている場合のみ実行
+    if: ${{ vars.ZHIHU_AUTO_POST == 'true' }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+          token: ${{ secrets.GH_PAT }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install -r scripts/requirements.txt
+
+      - name: Find newly added or modified articles
+        id: changed
+        run: |
+          # 前回のコミットとの差分から変更されたMarkdownファイルを取得
+          CHANGED=$(git diff --name-only --diff-filter=ACM HEAD~1 HEAD -- 'articles/*.md' | tr '\n' ' ')
+          echo "files=$CHANGED" >> "$GITHUB_OUTPUT"
+          echo "変更された記事: $CHANGED"
+
+      - name: Post articles to Zhihu
+        if: steps.changed.outputs.files != ''
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          ZHIHU_COOKIE: ${{ secrets.ZHIHU_COOKIE }}
+        run: |
+          for file in ${{ steps.changed.outputs.files }}; do
+            echo "投稿中: $file"
+            python scripts/post-to-zhihu.py "$file" || echo "警告: $file の投稿に失敗しました"
+          done
+
+      - name: Commit updated tracking file
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add scripts/zhihu-posted.json
+          if git diff --staged --quiet; then
+            echo "追跡ファイルに変更なし"
+          else
+            git commit -m "chore: Update Zhihu posting tracking [skip ci]"
+            git push origin main
+          fi
