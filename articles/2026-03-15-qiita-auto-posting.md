@@ -13,9 +13,9 @@ published_at: "2026-03-15 13:00"
 
 ## はじめに
 
-前回の記事で [ZennからZhihu（知乎）への自動投稿](https://zenn.dev/long910/articles/2026-03-15-zhihu-auto-posting) の仕組みを作りました。
+Zennで記事を書いてGitHubにpushするだけで、**Qiitaにも自動で同じ内容が投稿される**仕組みを作りました。
 
-今回はさらに **Qiita への自動同期投稿** を追加しました。Zennで記事を書いてGitHubにpushするだけで、Qiitaにも自動で同じ内容が投稿されます。
+マルチプラットフォーム同期の全体像は [こちらの記事](https://zenn.dev/long910/articles/2026-03-15-multi-platform-blog-strategy) をご覧ください。本記事ではQiitaへの同期に絞って解説します。
 
 ---
 

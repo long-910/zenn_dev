@@ -13,7 +13,7 @@ published_at: "2026-03-15 14:00"
 
 ## はじめに
 
-[Qiita自動投稿](https://zenn.dev/long910/articles/2026-03-15-qiita-auto-posting)・[知乎自動投稿](https://zenn.dev/long910/articles/2026-03-15-zhihu-auto-posting)に続いて、今回は **はてなブログへの自動投稿** を追加しました。
+[Qiita自動同期](https://zenn.dev/long910/articles/2026-03-15-qiita-auto-posting) に続いて、今回は **はてなブログへの自動投稿** を追加しました。
 
 はてなブログは国内最大級のブログプラットフォームで、技術系だけでなく幅広い読者層にリーチできます。また、はてなブックマークとの連携で技術記事がバズりやすいのも魅力です。
 

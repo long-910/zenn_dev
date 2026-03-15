@@ -1,5 +1,5 @@
 ---
-title: "Zenn記事を5つのプラットフォームに自動配信する仕組みを作った【完全版】"
+title: "Zenn記事をQiita・はてな・noteに自動同期する仕組みを作った【マルチプラットフォーム配信】"
 emoji: "🌐"
 type: "tech"
 topics: ["zenn", "qiita", "hatenablog", "githubactions", "automation"]
@@ -17,11 +17,17 @@ published_at: "2026-03-15 16:00"
 
 この記事は、各プラットフォームのAPI調査から実装まで、全プロセスを記録したものです。
 
+:::message
+**検証状況について**
+- **GitHub Pages・Qiita・はてなブログ・note.com**: 実装済み・順次検証中
+- **知乎（Zhihu）**: 構想段階・現時点では未検証（詳細は後述）
+:::
+
 ---
 
 ## 各プラットフォームのAPI調査結果
 
-まず、候補となる日本語・中国語プラットフォームのAPI対応状況を調べました。
+まず、候補となるプラットフォームのAPI対応状況を調べました。
 
 ### 調査対象と結論
 
@@ -38,13 +44,13 @@ published_at: "2026-03-15 16:00"
 
 ### ポイント解説
 
-**Qiita・はてなブログ**: 公式APIが整備されており、最も安定した選択肢。Qiitaはアクセストークン1つで済み、はてなはAtomPubという標準プロトコルを使うため実装が堅牢。
+**Qiita・はてなブログ**: 公式APIが整備されており、最も安定した選択肢。Qiitaはアクセストークン1つで済み、はてなはAtomPubという標準プロトコルを使うため実装が堅牢。順次動作検証を進めています。
 
 **Dev.to・Hashnode**: 英語圏向け。公式APIあり。Claude APIで英訳すれば自動化可能。（今回は未実装）
 
-**note.com**: **公式APIなし**。しかしコミュニティが内部APIを解析しており、Pythonライブラリ（NoteClient）や直接API呼び出しで自動投稿が可能。ただし仕様変更のリスクあり。
+**note.com**: **公式APIなし**。しかしコミュニティが内部APIを解析しており、Pythonライブラリ（NoteClient）や直接API呼び出しで自動投稿が可能。ただし仕様変更のリスクあり。実装済みで検証中。
 
-**知乎（Zhihu）**: 中国最大の知識共有プラットフォーム（月間アクティブユーザー1億人超）。公式API完全非公開。Cookie認証で投稿可能だが、Cookieの有効期限切れや仕様変更リスクが高い。また日本語記事をそのまま投稿しても意味がないため、Claude APIによる中国語翻訳が必須。
+**知乎（Zhihu）**: 中国最大の知識共有プラットフォーム（月間アクティブユーザー1億人超）。公式API完全非公開。Cookie認証で投稿可能だが、Cookieの有効期限切れや仕様変更リスクが高い。また日本語記事をそのまま投稿しても意味がないため、Claude APIによる中国語翻訳が必須。**現時点では構想段階にとどめており、未検証です。**
 
 **Medium**: 2024年以降、記事投稿APIを完全廃止。技術的な自動投稿は不可能。
 
@@ -102,22 +108,17 @@ note = Note(
 
 result = note.create_article(
     title="記事タイトル",
-    content_body="## Markdown本文...",  # 直接文字列も渡せる
+    content_body="## Markdown本文...",
     input_tag_list=["python", "automation"],
     post_setting=True,   # True=即時公開, False=下書き
-    headless=True,       # ヘッドレスモード
+    headless=True,
 )
-# result["post_url"] → 公開URL
 ```
 
-**メリット**: UI変更に対してHTTPより修復しやすい。`janome`（日本語形態素解析）でタグを自動抽出する機能もある
+**メリット**: UI変更に対してHTTPより修復しやすい
 **デメリット**: Chrome/Firefoxが必要。GitHub Actionsでは追加インストールが必要。処理が遅くリソース消費が大きい
 
 **今回はアプローチ1（直接HTTP）を採用**しました。GitHub Actionsでブラウザなしに動き、requirements.txtへの追加依存も不要なためです。
-
-### note.comの利用規約について
-
-note.comの利用規約には自動投稿を明示的に禁止する条項は見当たりません。ただし、大量の自動投稿やスパム行為は当然禁止されています。クロスポストの目的での利用は良識の範囲内と判断しました。
 
 ---
 
@@ -131,13 +132,16 @@ articles/*.md (Zenn記事)
               ▼
      GitHub Actions (同時並行で実行)
               │
-    ┌─────────┼────────────┬────────────┬────────────┐
-    ▼         ▼            ▼            ▼            ▼
-GitHub     Qiita       はてな        note.com     知乎
-Pages    REST API    AtomPub     内部API(非公式)  内部API(非公式)
-(日本語)   (日本語)    (日本語)      (日本語)      (中国語翻訳)
-                                               ↑
-                                          Claude API
+    ┌─────────┼────────────┬────────────┐
+    ▼         ▼            ▼            ▼
+GitHub     Qiita       はてな        note.com
+Pages    REST API    AtomPub     内部API(非公式)
+(日本語)   (日本語)    (日本語)      (日本語)
+                                  ※順次検証中
+
+    ┄ ┄ ┄ ┄ ┄ ┄ ┄ ┄ ┄ ┄ ┄ ┄ ┄ ┄ ┄ ┄ ┄ ┄
+    知乎（Zhihu）: 構想段階・未検証
+    ※ 実現には中国語翻訳(Claude API)が必要
 ```
 
 ### 設定ファイル構成
@@ -149,18 +153,15 @@ Pages    REST API    AtomPub     内部API(非公式)  内部API(非公式)
     ├── sync-articles.yml       → GitHub Pages
     ├── auto-post-qiita.yml     → Qiita
     ├── auto-post-hatena.yml    → はてなブログ
-    ├── auto-post-note.yml      → note.com
-    └── auto-post-zhihu.yml     → 知乎
+    └── auto-post-note.yml      → note.com
 scripts/
 ├── post-to-qiita.py
 ├── post-to-hatena.py
 ├── post-to-note.py
-├── post-to-zhihu.py
 ├── requirements.txt
 ├── qiita-posted.json     ← 各プラットフォームの投稿履歴
 ├── hatena-posted.json
-├── note-posted.json
-└── zhihu-posted.json
+└── note-posted.json
 ```
 
 ---
@@ -187,10 +188,6 @@ scripts/
     "note": {
       "enabled": false,
       "exclude_articles": []
-    },
-    "zhihu": {
-      "enabled": false,
-      "exclude_articles": []
     }
   }
 }
@@ -214,11 +211,9 @@ scripts/
 | `NOTE_EMAIL` | note.com | note.comログインメール |
 | `NOTE_PASSWORD` | note.com | note.comログインパスワード |
 | `NOTE_USER_ID` | note.com | note.comのユーザーID（URLのID） |
-| `ZHIHU_COOKIE` | 知乎 | ブラウザ開発ツールからCookieをコピー |
-| `ANTHROPIC_API_KEY` | 知乎（翻訳） | https://console.anthropic.com/ |
 
 :::message alert
-`NOTE_PASSWORD` や `ZHIHU_COOKIE` などの認証情報はGitHub Secretsに保存し、絶対にコードにハードコードしないでください。
+パスワードや認証情報はGitHub Secretsに保存し、絶対にコードにハードコードしないでください。
 :::
 
 ---
@@ -227,12 +222,12 @@ scripts/
 
 各プラットフォームへの変換はスクリプトが自動処理します：
 
-| Zenn記法 | Qiita | はてなブログ | note.com | 知乎 |
-|---------|-------|------------|---------|------|
-| `:::message` | `:::note info` | `> 💡 blockquote` | `**💡 メモ:**` | `<blockquote>` |
-| `:::message alert` | `:::note alert` | `> ⚠️ blockquote` | `**⚠️ 注意:**` | `<blockquote>` |
-| `:::details タイトル` | `<details>` HTML | `<details>` HTML | **タイトル**（展開） | セクション |
-| `@[youtube](id)` | YouTube URL | YouTube URL | YouTube URL | 削除 |
+| Zenn記法 | Qiita | はてなブログ | note.com |
+|---------|-------|------------|---------|
+| `:::message` | `:::note info` | `> 💡 blockquote` | `**💡 メモ:**` |
+| `:::message alert` | `:::note alert` | `> ⚠️ blockquote` | `**⚠️ 注意:**` |
+| `:::details タイトル` | `<details>` HTML | `<details>` HTML | **タイトル**（展開） |
+| `@[youtube](id)` | YouTube URL | YouTube URL | YouTube URL |
 
 ---
 
@@ -259,11 +254,6 @@ export NOTE_EMAIL="you@example.com"
 export NOTE_PASSWORD="your-password"
 export NOTE_USER_ID="your-note-id"
 python scripts/post-to-note.py --dry-run articles/my-article.md
-
-# 知乎（翻訳あり）
-export ZHIHU_COOKIE="z_c0=xxx; _xsrf=xxx"
-export ANTHROPIC_API_KEY="your-key"
-python scripts/post-to-zhihu.py articles/my-article.md
 ```
 
 ---
@@ -272,39 +262,43 @@ python scripts/post-to-zhihu.py articles/my-article.md
 
 ### 公式API（推奨）: Qiita・はてなブログ
 
-最も安定。アクセストークンは長期有効で、API仕様の破壊的変更は公式アナウンスされます。
+最も安定。アクセストークンは長期有効で、API仕様の破壊的変更は公式アナウンスされます。順次動作確認を進めています。
 
-### 非公式API（リスクあり）: note.com・知乎
+### 非公式API（リスクあり）: note.com
 
-| リスク | note.com | 知乎 |
-|--------|---------|------|
-| API仕様変更 | 中（定期的に変わる） | 高（突然変わる） |
-| 認証の失効 | 低（パスワードは長期有効） | 高（Cookie数週間で失効） |
-| アカウントBANリスク | 低（自動投稿の明示禁止なし） | 中（規約に曖昧な記述あり） |
-| 対処法 | エラー時に手動確認 | Cookieを定期更新、失敗を無視設定 |
+| リスク | note.com |
+|--------|---------|
+| API仕様変更 | 中（定期的に変わる） |
+| 認証の失効 | 低（パスワードは長期有効） |
+| アカウントBANリスク | 低（自動投稿の明示禁止なし） |
+| 対処法 | エラー時に手動確認 |
 
 非公式APIを使うプラットフォームは `enabled: false` をデフォルトにして、意識的に有効化する設計にしています。
+
+### 構想段階: 知乎（Zhihu）
+
+知乎への投稿はアイデアとして検討しているものの、現時点では**未検証**です。実現するには非公式のCookie認証に加えてClaude APIによる中国語翻訳が必要で、実用化のハードルが高い状況です。興味のある方は [構想設計メモ](https://zenn.dev/long910/articles/2026-03-15-zhihu-auto-posting) を参照してください。
 
 ---
 
 ## まとめ
 
-| | 実装済み | 翻訳 | 安定性 |
-|--|:-------:|:----:|:------:|
-| GitHub Pages | ✅ | 不要 | ◎ |
-| Qiita | ✅ | 不要 | ◎ |
-| はてなブログ | ✅ | 不要 | ◎ |
-| note.com | ✅ | 不要 | △（非公式） |
-| 知乎 | ✅ | Claude APIで中国語翻訳 | △（非公式） |
+| | 実装 | 検証状況 | 安定性 |
+|--|:---:|:------:|:------:|
+| GitHub Pages | ✅ | 稼働中 | ◎ |
+| Qiita | ✅ | 検証中 | ◎ |
+| はてなブログ | ✅ | 検証中 | ◎ |
+| note.com | ✅ | 検証中 | △（非公式） |
+| 知乎（Zhihu） | 🔧 | 構想段階・未検証 | —（非公式） |
 
-**1回のgit pushで最大5プラットフォームに配信**できるようになりました。
+**1回のgit pushで最大4プラットフォームに配信**できるようになりました（Zhihuは今後の検討課題）。
 
 ---
 
 ## シリーズ記事
 
-1. [知乎（Zhihu）自動投稿](https://zenn.dev/long910/articles/2026-03-15-zhihu-auto-posting)
-2. [Qiita自動投稿 + プラットフォーム比較](https://zenn.dev/long910/articles/2026-03-15-qiita-auto-posting)
-3. [はてなブログAtomPub自動投稿](https://zenn.dev/long910/articles/2026-03-15-hatena-auto-posting)
-4. [sync-platforms.jsonで設定を一元管理](https://zenn.dev/long910/articles/2026-03-15-sync-platforms-config)
-5. **この記事: 全プラットフォーム完全版**
+1. [Qiita自動同期投稿](https://zenn.dev/long910/articles/2026-03-15-qiita-auto-posting)
+2. [はてなブログAtomPub自動投稿](https://zenn.dev/long910/articles/2026-03-15-hatena-auto-posting)
+3. [sync-platforms.jsonで設定を一元管理](https://zenn.dev/long910/articles/2026-03-15-sync-platforms-config)
+4. **この記事: 全プラットフォーム概要**
+5. [知乎（Zhihu）自動投稿の構想設計メモ](https://zenn.dev/long910/articles/2026-03-15-zhihu-auto-posting)
