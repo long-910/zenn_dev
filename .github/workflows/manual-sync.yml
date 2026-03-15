@@ -1,0 +1,207 @@
+name: Manual Sync to Platforms
+
+on:
+  workflow_dispatch:
+    inputs:
+      article:
+        description: "記事ファイル名 (例: 2026-03-13-claude-code-hooks.md、空欄で未同期記事を全件処理)"
+        required: false
+        type: string
+        default: ""
+      platform:
+        description: "同期先プラットフォーム"
+        type: choice
+        options:
+          - all
+          - qiita
+          - hatena
+          - zhihu
+        default: all
+      force:
+        description: "投稿済み記事も強制更新する（重複投稿注意）"
+        type: boolean
+        default: false
+
+jobs:
+  sync-qiita:
+    if: inputs.platform == 'all' || inputs.platform == 'qiita'
+    runs-on: ubuntu-latest
+    concurrency:
+      group: post-to-qiita-manual
+      cancel-in-progress: false
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GH_PAT }}
+
+      - name: Check if Qiita posting is enabled
+        id: config
+        run: |
+          ENABLED=$(jq -r '.platforms.qiita.enabled' .github/sync-platforms.json)
+          echo "enabled=$ENABLED" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Python
+        if: steps.config.outputs.enabled == 'true'
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        if: steps.config.outputs.enabled == 'true'
+        run: pip install -r scripts/requirements.txt
+
+      - name: Sync to Qiita
+        if: steps.config.outputs.enabled == 'true'
+        env:
+          QIITA_TOKEN: ${{ secrets.QIITA_TOKEN }}
+        run: |
+          FORCE_FLAG=""
+          if [ "${{ inputs.force }}" = "true" ]; then FORCE_FLAG="--force"; fi
+          if [ -n "${{ inputs.article }}" ]; then
+            FILE_ARG="articles/${{ inputs.article }}"
+          else
+            FILE_ARG="--all"
+          fi
+          python scripts/post-to-qiita.py $FORCE_FLAG $FILE_ARG
+
+      - name: Commit updated tracking file
+        if: steps.config.outputs.enabled == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add scripts/qiita-posted.json
+          if git diff --staged --quiet; then
+            echo "追跡ファイルに変更なし"
+          else
+            git commit -m "chore: Update Qiita posting tracking [skip ci]"
+            for i in 1 2 3 4 5; do
+              git pull --rebase origin main && git push origin main && break
+              echo "push失敗、リトライ $i/5"
+              sleep $((i * 3))
+            done
+          fi
+
+  sync-hatena:
+    if: inputs.platform == 'all' || inputs.platform == 'hatena'
+    runs-on: ubuntu-latest
+    concurrency:
+      group: post-to-hatena-manual
+      cancel-in-progress: false
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GH_PAT }}
+
+      - name: Check if Hatena posting is enabled
+        id: config
+        run: |
+          ENABLED=$(jq -r '.platforms.hatena.enabled' .github/sync-platforms.json)
+          echo "enabled=$ENABLED" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Python
+        if: steps.config.outputs.enabled == 'true'
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        if: steps.config.outputs.enabled == 'true'
+        run: pip install -r scripts/requirements.txt
+
+      - name: Sync to Hatena Blog
+        if: steps.config.outputs.enabled == 'true'
+        env:
+          HATENA_ID: ${{ secrets.HATENA_ID }}
+          HATENA_BLOG_ID: ${{ secrets.HATENA_BLOG_ID }}
+          HATENA_API_KEY: ${{ secrets.HATENA_API_KEY }}
+        run: |
+          FORCE_FLAG=""
+          if [ "${{ inputs.force }}" = "true" ]; then FORCE_FLAG="--force"; fi
+          if [ -n "${{ inputs.article }}" ]; then
+            FILE_ARG="articles/${{ inputs.article }}"
+          else
+            FILE_ARG="--all"
+          fi
+          python scripts/post-to-hatena.py $FORCE_FLAG $FILE_ARG
+
+      - name: Commit updated tracking file
+        if: steps.config.outputs.enabled == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add scripts/hatena-posted.json
+          if git diff --staged --quiet; then
+            echo "追跡ファイルに変更なし"
+          else
+            git commit -m "chore: Update Hatena posting tracking [skip ci]"
+            for i in 1 2 3 4 5; do
+              git pull --rebase origin main && git push origin main && break
+              echo "push失敗、リトライ $i/5"
+              sleep $((i * 3))
+            done
+          fi
+
+  sync-zhihu:
+    if: inputs.platform == 'all' || inputs.platform == 'zhihu'
+    runs-on: ubuntu-latest
+    concurrency:
+      group: post-to-zhihu-manual
+      cancel-in-progress: false
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GH_PAT }}
+
+      - name: Check if Zhihu posting is enabled
+        id: config
+        run: |
+          ENABLED=$(jq -r '.platforms.zhihu.enabled' .github/sync-platforms.json)
+          echo "enabled=$ENABLED" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Python
+        if: steps.config.outputs.enabled == 'true'
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        if: steps.config.outputs.enabled == 'true'
+        run: pip install -r scripts/requirements.txt
+
+      - name: Sync to Zhihu
+        if: steps.config.outputs.enabled == 'true'
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          ZHIHU_COOKIE: ${{ secrets.ZHIHU_COOKIE }}
+        run: |
+          FORCE_FLAG=""
+          if [ "${{ inputs.force }}" = "true" ]; then FORCE_FLAG="--force"; fi
+          if [ -n "${{ inputs.article }}" ]; then
+            FILE_ARG="articles/${{ inputs.article }}"
+          else
+            FILE_ARG="--all"
+          fi
+          python scripts/post-to-zhihu.py $FORCE_FLAG $FILE_ARG
+
+      - name: Commit updated tracking file
+        if: steps.config.outputs.enabled == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add scripts/zhihu-posted.json
+          if git diff --staged --quiet; then
+            echo "追跡ファイルに変更なし"
+          else
+            git commit -m "chore: Update Zhihu posting tracking [skip ci]"
+            for i in 1 2 3 4 5; do
+              git pull --rebase origin main && git push origin main && break
+              echo "push失敗、リトライ $i/5"
+              sleep $((i * 3))
+            done
+          fi
