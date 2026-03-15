@@ -5,5 +5,12 @@
     "title": "Claude Code Hooks完全ガイド：ファイル保存でテスト自動実行・Slack通知まで",
     "posted_at": "2026-03-15T07:07:59Z",
     "updated_at": "2026-03-15T07:07:59Z"
+  },
+  "2026-03-13-uv-python.md": {
+    "url": "https://qiita.com/long-910/items/4440f24bbb4f5e84e22d",
+    "item_id": "4440f24bbb4f5e84e22d",
+    "title": "uv完全ガイド：pip・poetry・pyenvをすべて置き換えるPythonパッケージマネージャー",
+    "posted_at": "2026-03-15T08:00:29Z",
+    "updated_at": "2026-03-15T08:00:29Z"
   }
 }
