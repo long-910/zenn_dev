@@ -50,7 +50,7 @@ jobs:
       - name: Post articles to CSDN
         if: steps.config.outputs.enabled == 'true' && steps.changed.outputs.files != ''
         env:
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          DEEPL_API_KEY: ${{ secrets.DEEPL_API_KEY }}
           CSDN_COOKIE: ${{ secrets.CSDN_COOKIE }}
         run: |
           for file in ${{ steps.changed.outputs.files }}; do

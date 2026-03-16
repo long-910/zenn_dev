@@ -19,9 +19,10 @@ Zenn記事を中国語に翻訳してCSDN（中国最大の技術ブログサイ
   python scripts/post-to-csdn.py --force articles/my-article.md
 
 必要な環境変数:
-  ANTHROPIC_API_KEY  - Claude API キー（翻訳用）
-  CSDN_COOKIE        - CSDNのログイン済みCookie文字列
-                       (UserToken を含む必要がある)
+  DEEPL_API_KEY  - DeepL API キー（翻訳用）
+                   https://www.deepl.com/en/pro#developer で無料登録可能（月50万文字無料）
+  CSDN_COOKIE    - CSDNのログイン済みCookie文字列
+                   (UserToken を含む必要がある)
 """
 
 import argparse
@@ -33,7 +34,7 @@ import time
 from pathlib import Path
 from typing import Optional
 
-import anthropic
+import deepl
 import frontmatter
 import requests
 
@@ -128,68 +129,36 @@ def clean_zenn_content(content: str) -> str:
 
 
 def translate_to_chinese(title: str, content: str) -> tuple[str, str]:
-    """Claude APIを使用して日本語記事を中国語に翻訳する"""
-    api_key = os.environ.get("ANTHROPIC_API_KEY")
+    """DeepL APIを使用して日本語記事を簡体字中国語に翻訳する"""
+    api_key = os.environ.get("DEEPL_API_KEY")
     if not api_key:
-        raise ValueError("ANTHROPIC_API_KEY 環境変数が設定されていません")
+        raise ValueError("DEEPL_API_KEY 環境変数が設定されていません")
 
-    client = anthropic.Anthropic(api_key=api_key)
+    translator = deepl.Translator(api_key)
 
-    prompt = f"""请将以下日文技术文章翻译成简体中文。
+    # コードブロックを一時的にプレースホルダーに置換（翻訳されないよう保護）
+    code_blocks = []
 
-翻译要求：
-1. 保持所有代码块不变（代码块内的内容不要翻译）
-2. 保持所有URL链接不变
-3. 保持Markdown格式不变（标题、列表、粗体等）
-4. 技术术语使用中文技术社区常用的翻译或保留原文
-5. 翻译要自然流畅，符合中文技术文章的表达习惯
-6. 人名、产品名、工具名保留原文或使用通用中文名称
+    def replace_code_block(m: re.Match) -> str:
+        code_blocks.append(m.group(0))
+        return f"CODEBLOCK{len(code_blocks) - 1}ENDCODE"
 
-请用如下格式回复：
-TITLE: [翻译后的标题]
----
-[翻译后的正文内容]
+    protected = re.sub(r"```[\s\S]*?```", replace_code_block, content)
 
-原文标题: {title}
+    # タイトルと本文を翻訳
+    zh_title = translator.translate_text(
+        title, source_lang="JA", target_lang="ZH"
+    ).text
 
-原文内容:
-{content}"""
+    zh_content = translator.translate_text(
+        protected, source_lang="JA", target_lang="ZH"
+    ).text
 
-    message = client.messages.create(
-        model="claude-opus-4-6",
-        max_tokens=8192,
-        messages=[{"role": "user", "content": prompt}]
-    )
+    # コードブロックを復元
+    for i, block in enumerate(code_blocks):
+        zh_content = zh_content.replace(f"CODEBLOCK{i}ENDCODE", block)
 
-    response = message.content[0].text
-
-    # レスポンスをパース
-    lines = response.split("\n")
-    translated_title = ""
-    translated_content_lines = []
-    in_content = False
-
-    for line in lines:
-        if line.startswith("TITLE: "):
-            translated_title = line[7:].strip()
-        elif line == "---" and translated_title and not in_content:
-            in_content = True
-        elif in_content:
-            translated_content_lines.append(line)
-
-    if not translated_title:
-        translated_title = lines[0].replace("TITLE:", "").strip()
-
-    translated_content = "\n".join(translated_content_lines).strip()
-
-    if not translated_content:
-        parts = response.split("---\n", 1)
-        if len(parts) > 1:
-            translated_content = parts[1].strip()
-        else:
-            translated_content = response
-
-    return translated_title, translated_content
+    return zh_title, zh_content
 
 
 class CSDNClient:
