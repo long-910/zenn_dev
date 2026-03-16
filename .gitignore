@@ -3,3 +3,5 @@ node_modules
 # SpecStory explanation file
 .specstory/*
 .claude/settings.local.json
+# CSDNログインCookie（認証情報のため除外）
+scripts/csdn-cookies.json
