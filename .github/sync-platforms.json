@@ -22,6 +22,10 @@
       "enabled": false,
       "exclude_articles": []
     },
+    "wechat": {
+      "enabled": true,
+      "exclude_articles": []
+    },
     "note": {
       "enabled": false,
       "exclude_articles": []
