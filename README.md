@@ -126,9 +126,15 @@ git push origin main
 
 手動実行（GitHub Actions タブから workflow_dispatch）も可能です。
 
-### ローカル実行（知乎・CSDN）
+### ローカル実行（知乎・CSDN、およびその他プラットフォーム）
+
+> **注意:** 投稿追跡ファイル (`scripts/*-posted.json`) は `tracking-data` ブランチで管理されています。
+> ローカル実行の前後に以下のコマンドで同期してください。
 
 ```bash
+# 実行前: 最新の追跡データを取得
+./scripts/fetch-tracking.sh
+
 # 特定の記事を投稿
 python scripts/post-to-zhihu.py articles/2026-03-15-my-article.md
 python scripts/post-to-csdn.py articles/2026-03-15-my-article.md
@@ -148,6 +154,9 @@ python scripts/post-to-csdn.py --no-headless articles/my-article.md
 # 投稿済み記事の一覧
 python scripts/post-to-zhihu.py --list
 python scripts/post-to-csdn.py --list
+
+# 実行後: 更新した追跡データを保存
+./scripts/push-tracking.sh
 ```
 
 ### WeChat（GitHub Actions または ローカル）
@@ -203,19 +212,24 @@ python scripts/post-to-wechat.py --publish articles/my-article.md
 │       ├── sync-articles.yml    # GitHub Pages 同期
 │       ├── auto-post-qiita.yml  # Qiita 自動投稿
 │       ├── auto-post-hatena.yml # はてな 自動投稿
-│       └── auto-post-wechat.yml # WeChat 自動投稿
+│       ├── auto-post-note.yml   # note 自動投稿
+│       ├── auto-post-wechat.yml # WeChat 自動投稿
+│       └── manual-sync.yml      # 手動同期（workflow_dispatch）
 └── scripts/
     ├── requirements.txt
     ├── post-to-qiita.py
     ├── post-to-hatena.py
+    ├── post-to-note.py
     ├── post-to-wechat.py        # WeChat（公式API + DeepL翻訳）
     ├── post-to-zhihu.py         # 知乎（Selenium + DeepL翻訳）
     ├── post-to-csdn.py          # CSDN（Selenium + DeepL翻訳）
-    ├── qiita-posted.json        # 投稿追跡ファイル
-    ├── hatena-posted.json
-    ├── wechat-posted.json
-    └── zhihu-posted.json
+    ├── fetch-tracking.sh        # 追跡データをローカルに取得
+    └── push-tracking.sh         # 追跡データをリモートに保存
 ```
+
+> **追跡ファイル (`*-posted.json`) について**
+> `main` ブランチには含まれず、`tracking-data` ブランチで管理されています。
+> GitHub Actions は自動で同期します。ローカル実行時は `fetch-tracking.sh` / `push-tracking.sh` を使用してください。
 
 ---
 
