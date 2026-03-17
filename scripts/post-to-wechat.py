@@ -129,13 +129,11 @@ def translate_to_chinese(title: str, content: str) -> tuple[str, str]:
 
     protected = re.sub(r"```[\s\S]*?```", replace_code_block, content)
 
-    zh_title = translator.translate_text(
-        title, source_lang="JA", target_lang="ZH"
-    ).text
-
-    zh_content = translator.translate_text(
-        protected, source_lang="JA", target_lang="ZH"
-    ).text
+    results = translator.translate_text(
+        [title, protected], source_lang="JA", target_lang="ZH"
+    )
+    zh_title = results[0].text
+    zh_content = results[1].text
 
     for i, block in enumerate(code_blocks):
         zh_content = zh_content.replace(f"CODEBLOCK{i}ENDCODE", block)
