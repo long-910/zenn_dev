@@ -23,6 +23,12 @@ jobs:
           fetch-depth: 2
           token: ${{ secrets.GH_PAT }}
 
+      - name: Fetch tracking data from tracking-data branch
+        run: |
+          if git fetch origin tracking-data 2>/dev/null; then
+            git show origin/tracking-data:scripts/note-posted.json > scripts/note-posted.json 2>/dev/null || true
+          fi
+
       - name: Check if note posting is enabled
         id: config
         run: |
@@ -59,18 +65,31 @@ jobs:
             python scripts/post-to-note.py "$file" || echo "警告: $file の投稿に失敗しました"
           done
 
-      - name: Commit updated tracking file
+      - name: Save tracking to tracking-data branch
         if: steps.config.outputs.enabled == 'true'
         run: |
+          cp scripts/note-posted.json /tmp/tracking.json
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
+          if git ls-remote --exit-code origin tracking-data > /dev/null 2>&1; then
+            git fetch origin tracking-data
+            git checkout -b tracking-data-tmp origin/tracking-data
+          else
+            git checkout --orphan tracking-data-tmp
+            git rm -rf . || true
+          fi
+          mkdir -p scripts
+          cp /tmp/tracking.json scripts/note-posted.json
           git add scripts/note-posted.json
           if git diff --staged --quiet; then
             echo "追跡ファイルに変更なし"
           else
-            git commit -m "chore: Update note.com posting tracking [skip ci]"
+            git commit -m "chore: Update note.com posting tracking"
             for i in 1 2 3 4 5; do
-              git pull --rebase origin main && git push origin main && break
+              if git ls-remote --exit-code origin tracking-data > /dev/null 2>&1; then
+                git pull --rebase origin tracking-data 2>/dev/null || true
+              fi
+              git push origin tracking-data-tmp:tracking-data && break
               echo "push失敗、リトライ $i/5"
               sleep $((i * 3))
             done
