@@ -53,6 +53,33 @@ published_at: "2025-05-25 01:10"
 
 This block must **not** be added to any article.
 
+## Platform Sync (Qiita / Hatena / note / WeChat / Zhihu / CSDN)
+
+記事を `main` にプッシュすると各プラットフォームへの自動投稿ワークフローが起動する。
+
+### 追跡ファイルの管理
+
+各プラットフォームの投稿済み記事を管理する `scripts/*-posted.json` は、**`tracking-data` ブランチ**に保存される（`main` には含まれない）。これにより、追跡ファイルの更新が Zenn の GitHub 連携 webhook を無駄に発火させるのを防いでいる。
+
+### ローカルでスクリプトを実行する場合
+
+```bash
+# 1. 実行前: tracking-data ブランチから最新の追跡JSONを取得
+./scripts/fetch-tracking.sh
+
+# 2. スクリプト実行
+python scripts/post-to-qiita.py articles/2026-01-01-example.md
+
+# 3. 実行後: 更新した追跡JSONを tracking-data ブランチに保存
+./scripts/push-tracking.sh
+```
+
+fetch/push スクリプトは全プラットフォーム分をまとめて処理する。複数スクリプトを連続実行した場合も、最後に `push-tracking.sh` を一度呼べばよい。
+
+### 手動同期 (manual-sync.yml)
+
+GitHub Actions の `workflow_dispatch` から実行する。`main` へのプッシュは発生しないため、Zenn には影響しない。
+
 ## GitHub Pages Sync
 
 On push to `main`, the workflow `.github/workflows/sync-articles.yml` automatically:

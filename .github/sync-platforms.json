@@ -14,8 +14,16 @@
       "enabled": true,
       "exclude_articles": []
     },
+    "csdn": {
+      "enabled": true,
+      "exclude_articles": []
+    },
     "zhihu": {
       "enabled": false,
+      "exclude_articles": []
+    },
+    "wechat": {
+      "enabled": true,
       "exclude_articles": []
     },
     "note": {

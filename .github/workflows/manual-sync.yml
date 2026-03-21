@@ -39,6 +39,12 @@ jobs:
           fetch-depth: 0
           token: ${{ secrets.GH_PAT }}
 
+      - name: Fetch tracking data from tracking-data branch
+        run: |
+          if git fetch origin tracking-data 2>/dev/null; then
+            git show origin/tracking-data:scripts/qiita-posted.json > scripts/qiita-posted.json 2>/dev/null || true
+          fi
+
       - name: Check if Qiita posting is enabled
         id: config
         run: |
@@ -69,18 +75,31 @@ jobs:
           fi
           python scripts/post-to-qiita.py $FORCE_FLAG $FILE_ARG
 
-      - name: Commit updated tracking file
+      - name: Save tracking to tracking-data branch
         if: steps.config.outputs.enabled == 'true'
         run: |
+          cp scripts/qiita-posted.json /tmp/tracking.json
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
+          if git ls-remote --exit-code origin tracking-data > /dev/null 2>&1; then
+            git fetch origin tracking-data
+            git checkout -b tracking-data-tmp origin/tracking-data
+          else
+            git checkout --orphan tracking-data-tmp
+            git rm -rf . || true
+          fi
+          mkdir -p scripts
+          cp /tmp/tracking.json scripts/qiita-posted.json
           git add scripts/qiita-posted.json
           if git diff --staged --quiet; then
             echo "追跡ファイルに変更なし"
           else
-            git commit -m "chore: Update Qiita posting tracking [skip ci]"
+            git commit -m "chore: Update Qiita posting tracking"
             for i in 1 2 3 4 5; do
-              git pull --rebase origin main && git push origin main && break
+              if git ls-remote --exit-code origin tracking-data > /dev/null 2>&1; then
+                git pull --rebase origin tracking-data 2>/dev/null || true
+              fi
+              git push origin tracking-data-tmp:tracking-data && break
               echo "push失敗、リトライ $i/5"
               sleep $((i * 3))
             done
@@ -98,6 +117,12 @@ jobs:
         with:
           fetch-depth: 0
           token: ${{ secrets.GH_PAT }}
+
+      - name: Fetch tracking data from tracking-data branch
+        run: |
+          if git fetch origin tracking-data 2>/dev/null; then
+            git show origin/tracking-data:scripts/hatena-posted.json > scripts/hatena-posted.json 2>/dev/null || true
+          fi
 
       - name: Check if Hatena posting is enabled
         id: config
@@ -131,18 +156,31 @@ jobs:
           fi
           python scripts/post-to-hatena.py $FORCE_FLAG $FILE_ARG
 
-      - name: Commit updated tracking file
+      - name: Save tracking to tracking-data branch
         if: steps.config.outputs.enabled == 'true'
         run: |
+          cp scripts/hatena-posted.json /tmp/tracking.json
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
+          if git ls-remote --exit-code origin tracking-data > /dev/null 2>&1; then
+            git fetch origin tracking-data
+            git checkout -b tracking-data-tmp origin/tracking-data
+          else
+            git checkout --orphan tracking-data-tmp
+            git rm -rf . || true
+          fi
+          mkdir -p scripts
+          cp /tmp/tracking.json scripts/hatena-posted.json
           git add scripts/hatena-posted.json
           if git diff --staged --quiet; then
             echo "追跡ファイルに変更なし"
           else
-            git commit -m "chore: Update Hatena posting tracking [skip ci]"
+            git commit -m "chore: Update Hatena posting tracking"
             for i in 1 2 3 4 5; do
-              git pull --rebase origin main && git push origin main && break
+              if git ls-remote --exit-code origin tracking-data > /dev/null 2>&1; then
+                git pull --rebase origin tracking-data 2>/dev/null || true
+              fi
+              git push origin tracking-data-tmp:tracking-data && break
               echo "push失敗、リトライ $i/5"
               sleep $((i * 3))
             done
@@ -160,6 +198,12 @@ jobs:
         with:
           fetch-depth: 0
           token: ${{ secrets.GH_PAT }}
+
+      - name: Fetch tracking data from tracking-data branch
+        run: |
+          if git fetch origin tracking-data 2>/dev/null; then
+            git show origin/tracking-data:scripts/zhihu-posted.json > scripts/zhihu-posted.json 2>/dev/null || true
+          fi
 
       - name: Check if Zhihu posting is enabled
         id: config
@@ -192,18 +236,31 @@ jobs:
           fi
           python scripts/post-to-zhihu.py $FORCE_FLAG $FILE_ARG
 
-      - name: Commit updated tracking file
+      - name: Save tracking to tracking-data branch
         if: steps.config.outputs.enabled == 'true'
         run: |
+          cp scripts/zhihu-posted.json /tmp/tracking.json
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
+          if git ls-remote --exit-code origin tracking-data > /dev/null 2>&1; then
+            git fetch origin tracking-data
+            git checkout -b tracking-data-tmp origin/tracking-data
+          else
+            git checkout --orphan tracking-data-tmp
+            git rm -rf . || true
+          fi
+          mkdir -p scripts
+          cp /tmp/tracking.json scripts/zhihu-posted.json
           git add scripts/zhihu-posted.json
           if git diff --staged --quiet; then
             echo "追跡ファイルに変更なし"
           else
-            git commit -m "chore: Update Zhihu posting tracking [skip ci]"
+            git commit -m "chore: Update Zhihu posting tracking"
             for i in 1 2 3 4 5; do
-              git pull --rebase origin main && git push origin main && break
+              if git ls-remote --exit-code origin tracking-data > /dev/null 2>&1; then
+                git pull --rebase origin tracking-data 2>/dev/null || true
+              fi
+              git push origin tracking-data-tmp:tracking-data && break
               echo "push失敗、リトライ $i/5"
               sleep $((i * 3))
             done

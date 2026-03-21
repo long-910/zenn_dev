@@ -1,4 +1,4 @@
-name: Auto Post to note.com
+name: Auto Post to WeChat Official Account
 
 on:
   push:
@@ -7,13 +7,27 @@ on:
     paths:
       - "articles/*.md"
       - ".github/sync-platforms.json"
+  workflow_dispatch:
+    inputs:
+      force:
+        description: "投稿済み記事も強制更新する (--force)"
+        type: boolean
+        default: false
+      article:
+        description: "対象記事ファイル名 (例: 2026-03-13-claude-code-hooks.md)"
+        type: string
+        default: ""
+      publish:
+        description: "草稿を公開申請まで実行する (--publish)"
+        type: boolean
+        default: false
 
 concurrency:
-  group: post-to-note-${{ github.ref }}
+  group: post-to-wechat-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
-  post-to-note:
+  post-to-wechat:
     runs-on: ubuntu-latest
 
     steps:
@@ -26,13 +40,13 @@ jobs:
       - name: Fetch tracking data from tracking-data branch
         run: |
           if git fetch origin tracking-data 2>/dev/null; then
-            git show origin/tracking-data:scripts/note-posted.json > scripts/note-posted.json 2>/dev/null || true
+            git show origin/tracking-data:scripts/wechat-posted.json > scripts/wechat-posted.json 2>/dev/null || true
           fi
 
-      - name: Check if note posting is enabled
+      - name: Check if WeChat posting is enabled
         id: config
         run: |
-          ENABLED=$(jq -r '.platforms.note.enabled' .github/sync-platforms.json)
+          ENABLED=$(jq -r '.platforms.wechat.enabled' .github/sync-platforms.json)
           echo "enabled=$ENABLED" >> "$GITHUB_OUTPUT"
 
       - name: Set up Python
@@ -49,26 +63,39 @@ jobs:
         if: steps.config.outputs.enabled == 'true'
         id: changed
         run: |
-          CHANGED=$(git diff --name-only --diff-filter=ACM HEAD~1 HEAD -- 'articles/*.md' | tr '\n' ' ')
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ -n "${{ inputs.article }}" ]; then
+            CHANGED="articles/${{ inputs.article }}"
+          else
+            CHANGED=$(git diff --name-only --diff-filter=ACM HEAD~1 HEAD -- 'articles/*.md' | tr '\n' ' ')
+          fi
           echo "files=$CHANGED" >> "$GITHUB_OUTPUT"
           echo "変更された記事: $CHANGED"
 
-      - name: Post articles to note.com
+      - name: Post articles to WeChat Official Account
         if: steps.config.outputs.enabled == 'true' && steps.changed.outputs.files != ''
         env:
-          NOTE_EMAIL: ${{ secrets.NOTE_EMAIL }}
-          NOTE_PASSWORD: ${{ secrets.NOTE_PASSWORD }}
-          NOTE_USER_ID: ${{ secrets.NOTE_USER_ID }}
+          DEEPL_API_KEY: ${{ secrets.DEEPL_API_KEY }}
+          WECHAT_APP_ID: ${{ secrets.WECHAT_APP_ID }}
+          WECHAT_APP_SECRET: ${{ secrets.WECHAT_APP_SECRET }}
+          WECHAT_THUMB_MEDIA_ID: ${{ secrets.WECHAT_THUMB_MEDIA_ID }}
         run: |
+          FORCE_FLAG=""
+          PUBLISH_FLAG=""
+          if [ "${{ inputs.force }}" = "true" ]; then
+            FORCE_FLAG="--force"
+          fi
+          if [ "${{ inputs.publish }}" = "true" ]; then
+            PUBLISH_FLAG="--publish"
+          fi
           for file in ${{ steps.changed.outputs.files }}; do
             echo "投稿中: $file"
-            python scripts/post-to-note.py "$file" || echo "警告: $file の投稿に失敗しました"
+            python scripts/post-to-wechat.py $FORCE_FLAG $PUBLISH_FLAG "$file" || echo "警告: $file の投稿に失敗しました"
           done
 
       - name: Save tracking to tracking-data branch
         if: steps.config.outputs.enabled == 'true'
         run: |
-          cp scripts/note-posted.json /tmp/tracking.json
+          cp scripts/wechat-posted.json /tmp/tracking.json
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           if git ls-remote --exit-code origin tracking-data > /dev/null 2>&1; then
@@ -79,12 +106,12 @@ jobs:
             git rm -rf . || true
           fi
           mkdir -p scripts
-          cp /tmp/tracking.json scripts/note-posted.json
-          git add scripts/note-posted.json
+          cp /tmp/tracking.json scripts/wechat-posted.json
+          git add scripts/wechat-posted.json
           if git diff --staged --quiet; then
             echo "追跡ファイルに変更なし"
           else
-            git commit -m "chore: Update note.com posting tracking"
+            git commit -m "chore: Update WeChat posting tracking"
             for i in 1 2 3 4 5; do
               if git ls-remote --exit-code origin tracking-data > /dev/null 2>&1; then
                 git pull --rebase origin tracking-data 2>/dev/null || true

@@ -1,37 +1,37 @@
 #!/usr/bin/env python3
 """
-Zenn記事を中国語に翻訳して知乎（Zhihu）に投稿するスクリプト
+Zenn記事を中国語に翻訳してCSDN（中国最大の技術ブログサイト）に投稿するスクリプト
 Seleniumによるブラウザ自動化を使用（ローカル実行専用）
 
 使い方:
-  # 初回セットアップ（ブラウザを開いて知乎にログインし、Cookieを保存）
-  python scripts/post-to-zhihu.py --setup
+  # 初回セットアップ（ブラウザを開いてCSDNにログインし、Cookieを保存）
+  python scripts/post-to-csdn.py --setup
 
   # 特定の記事を投稿
-  python scripts/post-to-zhihu.py articles/2026-03-15-my-article.md
+  python scripts/post-to-csdn.py articles/2026-03-15-my-article.md
 
   # 複数記事を指定
-  python scripts/post-to-zhihu.py articles/article1.md articles/article2.md
+  python scripts/post-to-csdn.py articles/article1.md articles/article2.md
 
   # 未投稿の全記事を投稿
-  python scripts/post-to-zhihu.py --all
+  python scripts/post-to-csdn.py --all
 
   # 翻訳のみ確認（実際には投稿しない）
-  python scripts/post-to-zhihu.py --dry-run articles/my-article.md
+  python scripts/post-to-csdn.py --dry-run articles/my-article.md
 
   # 既投稿でも強制再投稿
-  python scripts/post-to-zhihu.py --force articles/my-article.md
+  python scripts/post-to-csdn.py --force articles/my-article.md
 
   # ブラウザを表示して実行（デバッグ用）
-  python scripts/post-to-zhihu.py --no-headless articles/my-article.md
+  python scripts/post-to-csdn.py --no-headless articles/my-article.md
 
 必要な環境変数:
   DEEPL_API_KEY  - DeepL API キー（翻訳用）
                    https://www.deepl.com/en/pro#developer で無料登録可能（月50万文字無料）
 
 初回のみ必要な操作:
-  --setup オプションでブラウザを開き、手動で知乎にログインしてEnterを押す。
-  Cookieが scripts/zhihu-cookies.json に保存され、次回以降は自動ログインされる。
+  --setup オプションでブラウザを開き、手動でCSDNにログインしてEnterを押す。
+  Cookieが scripts/csdn-cookies.json に保存され、次回以降は自動ログインされる。
 """
 
 import argparse
@@ -46,7 +46,7 @@ from typing import Optional
 import deepl
 import frontmatter
 from selenium import webdriver
-from selenium.common.exceptions import TimeoutException
+from selenium.common.exceptions import TimeoutException, WebDriverException
 from selenium.webdriver.chrome.options import Options as ChromeOptions
 from selenium.webdriver.chrome.service import Service as ChromeService
 from selenium.webdriver.common.by import By
@@ -57,16 +57,16 @@ from webdriver_manager.chrome import ChromeDriverManager
 
 SCRIPTS_DIR = Path(__file__).parent
 REPO_ROOT = SCRIPTS_DIR.parent
-POSTED_TRACKING_FILE = SCRIPTS_DIR / "zhihu-posted.json"
-COOKIES_FILE = SCRIPTS_DIR / "zhihu-cookies.json"
+POSTED_TRACKING_FILE = SCRIPTS_DIR / "csdn-posted.json"
+COOKIES_FILE = SCRIPTS_DIR / "csdn-cookies.json"
 ARTICLES_DIR = REPO_ROOT / "articles"
 ZENN_USER = "long910"
-PLATFORM_NAME = "zhihu"
+PLATFORM_NAME = "csdn"
 SYNC_PLATFORMS_FILE = REPO_ROOT / ".github" / "sync-platforms.json"
 
-ZHIHU_HOME_URL = "https://www.zhihu.com"
-ZHIHU_LOGIN_URL = "https://www.zhihu.com/signin"
-ZHIHU_WRITE_URL = "https://zhuanlan.zhihu.com/write"
+CSDN_LOGIN_URL = "https://passport.csdn.net/login"
+CSDN_EDITOR_URL = "https://editor.csdn.net/md/"
+CSDN_HOME_URL = "https://www.csdn.net"
 
 
 def is_excluded(filename: str) -> bool:
@@ -187,8 +187,8 @@ def build_driver(headless: bool = True) -> webdriver.Chrome:
     return driver
 
 
-class ZhihuSeleniumClient:
-    """Seleniumによる知乎ブラウザ自動化クライアント"""
+class CSDNSeleniumClient:
+    """SeleniumによるCSDNブラウザ自動化クライアント"""
 
     def __init__(self, headless: bool = True):
         self.driver = build_driver(headless=headless)
@@ -201,13 +201,15 @@ class ZhihuSeleniumClient:
         self.driver.quit()
 
     def load_cookies(self) -> bool:
-        """保存済みCookieを読み込む"""
+        """保存済みCookieを読み込む。成功すればTrue"""
         if not COOKIES_FILE.exists():
             return False
-        self.driver.get(ZHIHU_HOME_URL)
+        # Cookieをセットするにはまず対象ドメインに移動が必要
+        self.driver.get(CSDN_HOME_URL)
         with open(COOKIES_FILE) as f:
             cookies = json.load(f)
         for cookie in cookies:
+            # selenium が受け付けない余分なキーを除去
             cookie.pop("sameSite", None)
             try:
                 self.driver.add_cookie(cookie)
@@ -226,12 +228,14 @@ class ZhihuSeleniumClient:
 
     def is_logged_in(self) -> bool:
         """ログイン状態を確認する"""
-        self.driver.get(ZHIHU_HOME_URL)
+        self.driver.get(CSDN_HOME_URL)
         time.sleep(2)
+        # ログイン済みならアバター要素やユーザー名が表示される
         indicators = [
-            ".AppHeader-profile",
-            ".UserAvatar",
-            "img.Avatar",
+            ".avatar",
+            ".user-info",
+            "#csdn-toolbar-profile-image",
+            ".toolbar-profile",
         ]
         for selector in indicators:
             try:
@@ -239,35 +243,42 @@ class ZhihuSeleniumClient:
                 return True
             except Exception:
                 pass
-        return "signin" not in self.driver.current_url
+        # URLにloginが含まれていなければログイン済みとみなす
+        return "login" not in self.driver.current_url
 
     def setup_login(self) -> None:
         """手動ログインを促してCookieを保存するセットアップフロー"""
-        print("ブラウザを開きます。知乎にログインしてください。")
-        print(f"ログインページ: {ZHIHU_LOGIN_URL}")
-        self.driver.get(ZHIHU_LOGIN_URL)
-        input("\n知乎へのログインが完了したらEnterを押してください...")
+        print("ブラウザを開きます。CSDNにログインしてください。")
+        print(f"ログインページ: {CSDN_LOGIN_URL}")
+        self.driver.get(CSDN_LOGIN_URL)
+        input("\nCSDNへのログインが完了したらEnterを押してください...")
         if self.is_logged_in():
             self.save_cookies()
             print("セットアップ完了。次回から自動ログインされます。")
         else:
             print("警告: ログイン状態を確認できませんでした。Cookieは保存しませんでした。")
 
-    def post_article(self, title: str, markdown_content: str) -> str:
-        """記事を知乎に投稿してURLを返す"""
+    def post_article(
+        self,
+        title: str,
+        markdown_content: str,
+        tags: list[str],
+    ) -> str:
+        """記事をCSDNに投稿してURLを返す"""
         print("  エディタを開いています...")
-        self.driver.get(ZHIHU_WRITE_URL)
+        self.driver.get(CSDN_EDITOR_URL)
 
         # タイトル入力欄が現れるまで待機
         try:
             title_input = self.wait.until(
-                EC.presence_of_element_located(
-                    (By.CSS_SELECTOR, "input[placeholder*='标题'], .WriteIndex-titleInput")
-                )
+                EC.presence_of_element_located((By.CSS_SELECTOR, "#titleInput"))
             )
         except TimeoutException:
+            # セレクタが変わっている場合のフォールバック
             title_input = self.wait.until(
-                EC.presence_of_element_located((By.CSS_SELECTOR, "input[type='text']"))
+                EC.presence_of_element_located(
+                    (By.CSS_SELECTOR, "input[placeholder*='标题'], input[placeholder*='题目']")
+                )
             )
 
         # タイトルをセット
@@ -276,15 +287,25 @@ class ZhihuSeleniumClient:
         title_input.send_keys(title)
         time.sleep(0.5)
 
-        # コンテンツをエディタにセット
+        # Markdownエディタにコンテンツをセット（CodeMirror / 独自エディタ対応）
         print("  コンテンツを入力しています...")
         self._set_editor_content(markdown_content)
         time.sleep(1)
 
-        # 「发布」ボタンをクリック
-        print("  記事を公開しています...")
+        # 「发布文章」ボタンをクリック
+        print("  公開ダイアログを開いています...")
         publish_btn = self._find_publish_button()
         publish_btn.click()
+        time.sleep(2)
+
+        # タグを入力
+        if tags:
+            self._set_tags(tags)
+
+        # 最終公開ボタンをクリック
+        print("  記事を公開しています...")
+        confirm_btn = self._find_confirm_publish_button()
+        confirm_btn.click()
         time.sleep(3)
 
         # 公開後のURLを取得
@@ -292,67 +313,100 @@ class ZhihuSeleniumClient:
         return url
 
     def _set_editor_content(self, content: str) -> None:
-        """知乎エディタ（Draft.js / ProseMirror）にコンテンツをセットする"""
-        # 知乎はDraft.jsベースのリッチテキストエディタを使用
-        # execCommand経由でHTMLを挿入するのが最も安定している
-        editor_selectors = [
-            ".DraftEditor-editorContainer [contenteditable='true']",
-            ".ql-editor",
-            "[contenteditable='true'][data-contents]",
-            "[contenteditable='true']",
-        ]
+        """エディタにMarkdownコンテンツをセットする"""
+        # 方法1: CodeMirror JavaScript API
+        try:
+            self.driver.execute_script("""
+                var cm = document.querySelector('.CodeMirror');
+                if (cm && cm.CodeMirror) {
+                    cm.CodeMirror.setValue(arguments[0]);
+                    return true;
+                }
+                return false;
+            """, content)
+            time.sleep(0.5)
+            # 正しくセットされたか確認
+            val = self.driver.execute_script("""
+                var cm = document.querySelector('.CodeMirror');
+                if (cm && cm.CodeMirror) return cm.CodeMirror.getValue();
+                return '';
+            """)
+            if val and len(val) > 10:
+                return
+        except Exception:
+            pass
 
-        editor = None
-        for sel in editor_selectors:
-            try:
-                editor = self.wait.until(
-                    EC.presence_of_element_located((By.CSS_SELECTOR, sel))
-                )
-                break
-            except TimeoutException:
-                continue
-
-        if editor is None:
-            raise RuntimeError("知乎エディタが見つかりませんでした")
-
-        editor.click()
-        time.sleep(0.5)
-
-        # 全選択して削除
-        editor.send_keys(Keys.CONTROL + "a")
-        editor.send_keys(Keys.DELETE)
-        time.sleep(0.3)
-
-        # クリップボード経由で貼り付け（行ごとに分割して処理）
-        # JavaScriptのexecCommandを使ってテキストを挿入
-        self.driver.execute_script("""
-            var el = arguments[0];
-            el.focus();
-            document.execCommand('selectAll', false, null);
-            document.execCommand('delete', false, null);
-            document.execCommand('insertText', false, arguments[1]);
-        """, editor, content)
-        time.sleep(0.5)
-
-        # 上記が効かない場合のフォールバック: 直接クリップボードにセット
-        val = editor.text or editor.get_attribute("textContent") or ""
-        if len(val.strip()) < 10 and len(content) > 10:
-            # JavaScript clipboard API経由で貼り付け
-            self.driver.execute_script(
-                "navigator.clipboard.writeText(arguments[0]);", content
+        # 方法2: contenteditable / textarea に直接セット
+        try:
+            editor = self.driver.find_element(
+                By.CSS_SELECTOR,
+                ".editor-section textarea, .markdown-editor textarea"
             )
-            editor.click()
-            editor.send_keys(Keys.CONTROL + "a")
-            editor.send_keys(Keys.CONTROL + "v")
+            self.driver.execute_script(
+                "arguments[0].value = arguments[1];", editor, content
+            )
+            editor.send_keys(" ")  # 変更イベントをトリガー
+            editor.send_keys(Keys.BACK_SPACE)
+            return
+        except Exception:
+            pass
+
+        # 方法3: クリップボード経由（最終手段）
+        self.driver.execute_script(
+            f"navigator.clipboard.writeText({json.dumps(content)});"
+        )
+        editor_area = self.driver.find_element(
+            By.CSS_SELECTOR, ".editor-section, .CodeMirror, [contenteditable='true']"
+        )
+        editor_area.click()
+        editor_area.send_keys(Keys.CONTROL + "a")
+        editor_area.send_keys(Keys.CONTROL + "v")
 
     def _find_publish_button(self):
-        """「发布」ボタンを探す"""
+        """「発布文章」ボタンを探す"""
         selectors = [
-            "//button[contains(@class,'PublishButton')]",
+            "button.btn-publish",
+            "button.publish-btn",
             "//button[contains(text(),'发布文章')]",
             "//button[contains(text(),'发布')]",
-            ".WriteIndex-publishBtn",
-            ".PublishButton",
+        ]
+        for sel in selectors:
+            try:
+                if sel.startswith("//"):
+                    return self.wait.until(
+                        EC.element_to_be_clickable((By.XPATH, sel))
+                    )
+                else:
+                    return self.wait.until(
+                        EC.element_to_be_clickable((By.CSS_SELECTOR, sel))
+                    )
+            except TimeoutException:
+                continue
+        raise RuntimeError("発布文章ボタンが見つかりませんでした")
+
+    def _set_tags(self, tags: list[str]) -> None:
+        """公開ダイアログでタグを入力する"""
+        try:
+            tag_input = WebDriverWait(self.driver, 10).until(
+                EC.presence_of_element_located(
+                    (By.CSS_SELECTOR, ".tags-box input, .tag-input input, input[placeholder*='标签']")
+                )
+            )
+            for tag in tags[:5]:
+                tag_input.send_keys(tag)
+                time.sleep(0.3)
+                tag_input.send_keys(Keys.ENTER)
+                time.sleep(0.3)
+        except TimeoutException:
+            print("  警告: タグ入力欄が見つかりませんでした（スキップ）")
+
+    def _find_confirm_publish_button(self):
+        """公開確認ボタンを探す"""
+        selectors = [
+            "//button[contains(text(),'确定发布')]",
+            "//button[contains(text(),'发布')]",
+            ".dialog-footer .btn-primary",
+            ".sure.btn",
         ]
         for sel in selectors:
             try:
@@ -366,42 +420,39 @@ class ZhihuSeleniumClient:
                     )
             except TimeoutException:
                 continue
-        raise RuntimeError("发布ボタンが見つかりませんでした")
+        raise RuntimeError("公開確認ボタンが見つかりませんでした")
 
     def _get_published_url(self) -> str:
         """公開後の記事URLを取得する"""
-        # 公開後に zhuanlan.zhihu.com/p/XXXXXXX に遷移する
-        try:
-            WebDriverWait(self.driver, 15).until(
-                lambda d: "zhuanlan.zhihu.com/p/" in d.current_url
-            )
-            return self.driver.current_url
-        except TimeoutException:
-            pass
-
-        # URLから記事IDを抽出
+        # 公開後にエディタURLに記事IDが含まれる場合
         current = self.driver.current_url
-        match = re.search(r"zhihu\.com/p/(\d+)", current)
-        if match:
-            return f"https://zhuanlan.zhihu.com/p/{match.group(1)}"
+        # URLが blog.csdn.net/... に変わっていれば成功
+        if "blog.csdn.net" in current and "/article/details/" in current:
+            return current
 
-        # 成功ダイアログ内のリンクを探す
+        # エディタURLからIDを抽出 (?id=XXXXXXX)
+        match = re.search(r"[?&]id=(\d+)", current)
+        if match:
+            return f"https://blog.csdn.net/article/details/{match.group(1)}"
+
+        # 成功ダイアログからリンクを探す
         try:
             link = WebDriverWait(self.driver, 10).until(
                 EC.presence_of_element_located(
-                    (By.CSS_SELECTOR, "a[href*='zhuanlan.zhihu.com/p/']")
+                    (By.CSS_SELECTOR, "a[href*='blog.csdn.net']")
                 )
             )
             return link.get_attribute("href")
         except TimeoutException:
             pass
 
+        # フォールバック: 現在のURLを返す
         return current
 
 
 def setup_cookies(headless: bool = False) -> None:
     """初回セットアップ: 手動ログインしてCookieを保存する"""
-    with ZhihuSeleniumClient(headless=headless) as client:
+    with CSDNSeleniumClient(headless=headless) as client:
         client.setup_login()
 
 
@@ -411,7 +462,7 @@ def post_article(
     force: bool = False,
     headless: bool = True,
 ) -> Optional[str]:
-    """Zenn記事を知乎に投稿する"""
+    """Zenn記事をCSDNに投稿する"""
     path = Path(filepath)
     if not path.exists():
         print(f"エラー: ファイルが見つかりません: {filepath}")
@@ -445,6 +496,9 @@ def post_article(
     zh_title, zh_content = translate_to_chinese(title, content)
     print(f"  翻訳完了: {zh_title}")
 
+    topics = metadata.get("topics", [])
+    zh_tags = topics[:5] if topics else []
+
     zenn_url = f"https://zenn.dev/{ZENN_USER}/articles/{path.stem}"
     zh_content += (
         f"\n\n---\n\n"
@@ -454,6 +508,7 @@ def post_article(
 
     if dry_run:
         print(f"  [DRY RUN] タイトル: {zh_title}")
+        print(f"  [DRY RUN] タグ: {zh_tags}")
         print(f"  [DRY RUN] コンテンツ長: {len(zh_content)} 文字")
         print(f"  [DRY RUN] コンテンツプレビュー（先頭500文字）:\n{zh_content[:500]}")
         return None
@@ -462,7 +517,7 @@ def post_article(
         print("エラー: Cookieファイルが見つかりません。先に --setup を実行してください。")
         return None
 
-    with ZhihuSeleniumClient(headless=headless) as client:
+    with CSDNSeleniumClient(headless=headless) as client:
         print("  Cookieでログイン中...")
         client.load_cookies()
 
@@ -471,7 +526,7 @@ def post_article(
             return None
 
         print("  ログイン確認済み")
-        url = client.post_article(zh_title, zh_content)
+        url = client.post_article(zh_title, zh_content, zh_tags)
 
     print(f"  公開完了: {url}")
 
@@ -488,7 +543,7 @@ def post_article(
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Zenn記事を中国語に翻訳して知乎（Zhihu）に投稿する（Selenium版）",
+        description="Zenn記事を中国語に翻訳してCSDNに投稿する（Selenium版）",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=__doc__,
     )
@@ -532,7 +587,7 @@ def main():
     headless = not args.no_headless
 
     if args.setup:
-        setup_cookies(headless=False)
+        setup_cookies(headless=False)  # セットアップは必ず画面表示
         return
 
     if args.list:
