@@ -4,6 +4,13 @@
 [![Followers](https://badgen.org/img/zenn/long910/followers?style=flat-square)](https://zenn.dev/long910)
 [![Articles](https://badgen.org/img/zenn/long910/articles?style=flat-square)](https://zenn.dev/long910)
 
+[![Sync Articles to GitHub Pages](https://github.com/long-910/zenn_dev/actions/workflows/sync-articles.yml/badge.svg)](https://github.com/long-910/zenn_dev/actions/workflows/sync-articles.yml)
+[![Auto Post to Qiita](https://github.com/long-910/zenn_dev/actions/workflows/auto-post-qiita.yml/badge.svg)](https://github.com/long-910/zenn_dev/actions/workflows/auto-post-qiita.yml)
+[![Auto Post to Hatena Blog](https://github.com/long-910/zenn_dev/actions/workflows/auto-post-hatena.yml/badge.svg)](https://github.com/long-910/zenn_dev/actions/workflows/auto-post-hatena.yml)
+[![Auto Post to note.com](https://github.com/long-910/zenn_dev/actions/workflows/auto-post-note.yml/badge.svg)](https://github.com/long-910/zenn_dev/actions/workflows/auto-post-note.yml)
+[![Auto Post to WeChat Official Account](https://github.com/long-910/zenn_dev/actions/workflows/auto-post-wechat.yml/badge.svg)](https://github.com/long-910/zenn_dev/actions/workflows/auto-post-wechat.yml)
+[![Manual Sync to Platforms](https://github.com/long-910/zenn_dev/actions/workflows/manual-sync.yml/badge.svg)](https://github.com/long-910/zenn_dev/actions/workflows/manual-sync.yml)
+
 [Zenn](https://zenn.dev/long910) に公開している技術記事のソースリポジトリです。
 `main` ブランチへの push をトリガーに、複数プラットフォームへ自動同期します。
 

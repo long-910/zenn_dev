@@ -100,6 +100,7 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
           if git ls-remote --exit-code origin tracking-data > /dev/null 2>&1; then
             git fetch origin tracking-data
+            git checkout -- .
             git checkout -b tracking-data-tmp origin/tracking-data
           else
             git checkout --orphan tracking-data-tmp
