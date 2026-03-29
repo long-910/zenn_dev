@@ -5,5 +5,12 @@
     "title": "Zennの記事をGitHub Pagesに自動同期するCIの構築方法",
     "posted_at": "2026-03-29T08:48:51Z",
     "updated_at": "2026-03-29T08:48:51Z"
+  },
+  "2026-03-29-github-leak-check.md": {
+    "url": "https://long910.hatenablog.com/entry/2026/03/29/175007",
+    "entry_url": "https://blog.hatena.ne.jp/long910/long910.hatenablog.com/atom/entry/17179246901370546824",
+    "title": "GitHubのコミット履歴からメールアドレスが漏洩していないか自動チェックするツールを作った",
+    "posted_at": "2026-03-29T08:50:07Z",
+    "updated_at": "2026-03-29T08:50:07Z"
   }
 }
