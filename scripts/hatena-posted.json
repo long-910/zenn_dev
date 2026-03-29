@@ -1,1 +1,9 @@
-{}
+{
+  "2025-05-25-zenn-github-pages-sync-ci.md": {
+    "url": "https://long910.hatenablog.com/entry/2026/03/29/174851",
+    "entry_url": "https://blog.hatena.ne.jp/long910/long910.hatenablog.com/atom/entry/17179246901370546501",
+    "title": "Zennの記事をGitHub Pagesに自動同期するCIの構築方法",
+    "posted_at": "2026-03-29T08:48:51Z",
+    "updated_at": "2026-03-29T08:48:51Z"
+  }
+}
