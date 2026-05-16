@@ -564,23 +564,125 @@ Lessons Learned（事後学習）
 
 ---
 
+## 参考リソース
+
+### 公式・試験情報
+
+| リソース | 説明 | URL |
+|---|---|---|
+| **EC-Council 公式** | CEH の試験要項・申込み | https://www.eccouncil.org/train-certify/certified-ethical-hacker-ceh/ |
+| **CEH Exam Blueprint** | 出題範囲とドメイン比率の公式ドキュメント | EC-Council ポータルからダウンロード可能 |
+| **iLabs（公式仮想ラボ）** | EC-Council が提供するハンズオン演習環境 | https://ilabs.eccouncil.org/ |
+
+---
+
+### 書籍
+
+| 書籍 | 著者 | 特徴 |
+|---|---|---|
+| **CEH v12 Certified Ethical Hacker Study Guide** | Ric Messier | 試験範囲を網羅した定番テキスト。練習問題付き |
+| **CEH Certified Ethical Hacker All-in-One Exam Guide** | Matt Walker | 図解が豊富で概念の理解に向く。CEH の定番参考書 |
+| **The Web Application Hacker's Handbook** | Stuttard / Pinto | Web 攻撃の仕組みを深く掘り下げる。実務にも直結 |
+| **Hacking: The Art of Exploitation** | Jon Erickson | バッファオーバーフロー・シェルコードを C で学ぶ。上級者向け |
+| **ネットワークはなぜつながるのか** | 戸根勤 | TCP/IP の基礎を日本語で丁寧に解説。ネットワーク基礎固めに最適 |
+
+---
+
+### 無料の学習プラットフォーム
+
+#### ハンズオン演習（脆弱な環境・CTF）
+
+| プラットフォーム | 特徴 |
+|---|---|
+| **TryHackMe** | ブラウザだけで始められる。CEH 向けのラーニングパスあり。初心者に最適 |
+| **Hack The Box** | 実践的な CTF マシン群。中〜上級者向け |
+| **PentesterLab** | Web 脆弱性に特化。SQLi・XSS・SSRF などを段階的に学べる |
+| **PortSwigger Web Security Academy** | Burp Suite 開発元による無料の Web セキュリティ教材。OWASP 全項目をカバー |
+| **DVWA（Damn Vulnerable Web App）** | ローカルに構築できる脆弱なWebアプリ。SQLi/XSS を安全に練習できる |
+| **WebGoat** | OWASP が提供する意図的に脆弱なWebアプリ学習環境 |
+| **VulnHub** | 脆弱な仮想マシンのダウンロードサイト。ローカルで Pen Test を練習 |
+
+#### 動画・講座
+
+| プラットフォーム | 特徴 |
+|---|---|
+| **Udemy（Heath Adams / TCM Security）** | 実践的なエシカルハッキングコース。セール時に安価で購入可能 |
+| **INE（eLearnSecurity）** | CEH・OSCP 準備に対応した体系的なカリキュラム |
+| **YouTube: NetworkChuck** | ネットワークとセキュリティを楽しく解説。Nmap・Wireshark の入門動画が豊富 |
+| **YouTube: John Hammond** | CTF の解法・マルウェア解析を実演。中上級者向け |
+| **Cybrary** | セキュリティ資格対策の無料・有料コースを提供 |
+
+---
+
+### ツールの練習環境を素早く構築する
+
+```bash
+# Kali Linux を Docker で即起動（ローカルにインストール不要）
+docker pull kalilinux/kali-rolling
+docker run -it kalilinux/kali-rolling /bin/bash
+
+# DVWA をローカルで立ち上げる
+docker pull vulnerables/web-dvwa
+docker run -d -p 80:80 vulnerables/web-dvwa
+# → http://localhost にアクセスし admin/password でログイン
+
+# WebGoat を立ち上げる
+docker pull webgoat/goat-and-wolf
+docker run -d -p 8080:8080 webgoat/goat-and-wolf
+# → http://localhost:8080/WebGoat
+```
+
+---
+
+### 試験対策サイト・問題集
+
+| リソース | 説明 |
+|---|---|
+| **Boson ExSim** | 高品質な模擬試験。本番に近い難易度と解説 |
+| **Exam-Labs / ExamTopics** | ユーザー投稿の過去問・練習問題集（無料部分あり） |
+| **Anki フラッシュカード** | 用語暗記に最適。CEH 向けデッキをコミュニティが公開している |
+
+---
+
+### 最新の脅威情報を継続的にフォローする
+
+| リソース | 種別 | 説明 |
+|---|---|---|
+| **CVE（mitre.org）** | 脆弱性DB | 公式の脆弱性識別番号と詳細 |
+| **NVD（nvd.nist.gov）** | 脆弱性DB | CVE に CVSS スコアを付加した NIST のデータベース |
+| **Exploit-DB** | エクスプロイトDB | 公開 PoC コードの検索。`searchsploit` でローカル検索可能 |
+| **OWASP.org** | Web セキュリティ | Top 10・チートシート・テストガイドを無料公開 |
+| **SANS Internet Storm Center** | 脅威情報 | 日次の脅威レポートと技術解説 |
+| **Krebs on Security** | ニュース | Brian Krebs による深掘りセキュリティレポート |
+| **The Hacker News** | ニュース | 最新の脆弱性・インシデント情報を速報 |
+
+---
+
 ## まとめ：学習ロードマップ
 
 ```
-Step 1: フェーズとスキャン技法を固める
+Step 1: フェーズとスキャン技法を固める（1〜2週間）
          → 5フェーズ、Nmap のオプションを確実に覚える
+         → TryHackMe の「Pre-Security」パスで基礎を補完
 
-Step 2: ネットワーク攻撃を体系化
+Step 2: ネットワーク攻撃を体系化（1〜2週間）
          → ARP/DoS/MitM の仕組みを図で理解する
+         → Wireshark でパケットキャプチャを実際に観察する
 
-Step 3: Web 攻撃を実践で確認
+Step 3: Web 攻撃を実践で確認（2〜3週間）
          → SQLi, XSS, CSRF を DVWA / WebGoat で体験する
+         → PortSwigger Web Security Academy を平行して進める
 
-Step 4: マルウェア・暗号化を整理
+Step 4: マルウェア・暗号化を整理（1週間）
          → 種別の違い、アルゴリズムの特性を表で整理する
+         → TryHackMe の「SOC Level 1」でマルウェア解析に触れる
 
-Step 5: 法的・手続き的知識を補完
+Step 5: 法的・手続き的知識を補完（1週間）
          → フォレンジック、ペンテストの契約フローを押さえる
+
+Step 6: 模擬試験で弱点を潰す（2〜3週間）
+         → Boson ExSim か ExamTopics で本番形式に慣れる
+         → 正答率 75% 以上を安定して出せるまで繰り返す
 ```
 
 CEH の試験は「なぜその手法を使うか」の理解が問われます。用語の暗記だけでなく、**攻撃の流れと防御策をセットで理解する**ことが合格への近道です。
