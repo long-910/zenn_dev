@@ -1,5 +1,5 @@
 ---
-title: "Flipper One とは何か？ポケットサイズのLinux ARMコンピュータを徹底解説"
+title: "Flipper One が気になったので調べてみた — ポケットサイズのLinux ARMコンピュータ"
 emoji: "🐬"
 type: "tech"
 topics: ["flipper", "linux", "security", "hardware", "networking"]
