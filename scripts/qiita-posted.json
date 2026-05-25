@@ -103,5 +103,12 @@
     "title": "Flipper One が気になったので調べてみた — ポケットサイズのLinux ARMコンピュータ",
     "posted_at": "2026-05-23T07:09:50Z",
     "updated_at": "2026-05-23T07:09:50Z"
+  },
+  "2026-05-25-amivoice-claude-voice-assistant.md": {
+    "url": "https://qiita.com/long-910/items/23505f1d1d197c350f0c",
+    "item_id": "23505f1d1d197c350f0c",
+    "title": "AmiVoice API × Claude APIで作るリアルタイム日本語音声対話システム",
+    "posted_at": "2026-05-25T12:30:21Z",
+    "updated_at": "2026-05-25T12:30:21Z"
   }
 }
