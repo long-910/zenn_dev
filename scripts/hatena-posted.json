@@ -68,5 +68,12 @@
     "title": "Flipper One が気になったので調べてみた — ポケットサイズのLinux ARMコンピュータ",
     "posted_at": "2026-05-23T07:09:52Z",
     "updated_at": "2026-05-23T07:09:52Z"
+  },
+  "2026-05-25-amivoice-claude-voice-assistant.md": {
+    "url": "https://long910.hatenablog.com/entry/2026/05/25/213021",
+    "entry_url": "https://blog.hatena.ne.jp/long910/long910.hatenablog.com/atom/entry/14945776032035144586",
+    "title": "AmiVoice API × Claude APIで作るリアルタイム日本語音声対話システム",
+    "posted_at": "2026-05-25T12:30:22Z",
+    "updated_at": "2026-05-25T12:30:22Z"
   }
 }
