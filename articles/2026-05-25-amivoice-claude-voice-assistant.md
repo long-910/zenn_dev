@@ -7,41 +7,44 @@ published: true
 published_at: "2026-05-25 09:00"
 ---
 
-# AmiVoice API × Claude APIで作るリアルタイム日本語音声対話システム
-
 ## はじめに
 
-「日本語の音声認識を使ったAIアシスタントを作りたい」と思ったとき、真っ先に悩むのが精度です。汎用の音声認識エンジンでは、専門用語や日本語特有の表現がうまく認識されないことが多く、生成AIへの入力品質が落ちてしまいます。
+「日本語の音声認識を使ったAIアシスタントを作りたい」と思ったとき、まず壁になるのが**認識精度**です。汎用エンジンでは専門用語・固有名詞・日本語特有の表現が崩れやすく、生成AIへの入力品質が落ちてしまいます。
 
-本記事では、日本語特化の音声認識API「**AmiVoice API**」と「**Claude API**」を組み合わせ、高精度な日本語音声対話システムを構築する方法を解説します。WebSocketを使ったストリーミング認識により、話し終わる前から認識が始まる快適な体験を実現します。
+本記事では、日本語特化の音声認識API「**AmiVoice API**」と「**Claude API**」を組み合わせ、WebSocketストリーミングによるリアルタイム音声対話システムを構築します。公式ドキュメントをもとにプロトコル仕様を正確に押さえながら実装します。
 
 ### 完成するシステムの概要
 
-- ブラウザのマイクから音声を取得
+- ブラウザのマイクから音声を取得し、PCM形式でサーバーへ送信
 - AmiVoice APIのWebSocketで**リアルタイムストリーミング認識**
-- 認識テキストをClaude APIに渡して**自然な応答を生成**
-- Server-Sent Events（SSE）で応答を**ストリーミング表示**
-
-![システム構成図](https://storage.googleapis.com/zenn-user-upload/placeholder.png)
-*ブラウザ → Node.jsサーバー → AmiVoice API / Claude API*
+- 認識確定テキストをClaude APIに渡して**自然な応答をストリーミング生成**
 
 ---
 
 ## AmiVoice APIとは
 
-[AmiVoice API](https://acp.amivoice.com/)は株式会社アドバンスト・メディアが提供する日本語特化の音声認識クラウドサービスです。
+[AmiVoice API](https://acp.amivoice.com/amivoice_api/)はアドバンスト・メディアが提供する日本語特化の音声認識クラウドサービスです。汎用エンジンに加え、医療・金融・保険など専門領域向けのモデルも揃っており、特殊用語を多用する業務システムでの採用実績があります。
 
-### 特徴
+### 料金体系
 
-| 機能 | 内容 |
-|------|------|
-| 日本語精度 | 医療・法律・金融など専門領域モデルあり |
-| インターフェース | REST API / WebSocket API |
-| ストリーミング | WebSocket経由でリアルタイム認識可能 |
-| 話者分離 | 複数話者の発言を分離できるオプションあり |
-| 無料枠 | 月60分の無料利用が可能（2026年5月時点） |
+| エンジン | ログあり | ログなし |
+|----------|----------|----------|
+| 汎用（-a-general） | 99円/時間 | 158円/時間 |
+| 医療・電子カルテ | 297円/時間 | 475円/時間 |
 
-汎用エンジンと比べ、日本語固有表現・固有名詞・専門用語の認識精度が高く、AIへの入力品質向上に直結します。
+**毎月60分まで全エンジン無料**で利用できます。開発・検証フェーズはコストゼロでスタートできます。
+
+### 3種類のAPIインターフェース
+
+AmiVoice APIには用途に応じた3つのインターフェースがあります。
+
+| インターフェース | 特徴 | 向いているシーン |
+|----------------|------|----------------|
+| **WebSocket** | 双方向ストリーミング、リアルタイム認識 | 音声対話、会議リアルタイム字幕 |
+| **同期HTTP** | 音声ファイルをPOST→即レスポンス（16MB以下） | 短い録音ファイルの文字起こし |
+| **非同期HTTP** | ジョブキュー方式、大容量ファイル対応、感情解析オプションあり | 長時間音声のバッチ処理、コールセンター録音 |
+
+リアルタイム対話には**WebSocket**一択です。本記事もこのインターフェースを使います。
 
 ---
 
@@ -49,30 +52,96 @@ published_at: "2026-05-25 09:00"
 
 ```
 [ブラウザ]
-  │  Web Audio API でマイク音声取得（PCM 16kHz）
+  │  Web Audio API でマイク音声取得（PCM 16kHz / LE）
   │  WebSocket でサーバーへ送信
   ▼
 [Node.js サーバー]
-  │  ブラウザ ↔ AmiVoice を中継する WebSocket プロキシ
-  │  認識確定テキストを受け取り Claude API へ転送
+  │  ブラウザ ↔ AmiVoice を中継（APIキーをサーバー側に隠蔽）
+  │  A イベント（認識確定）受信 → Claude API 呼び出し
   │  SSE でクライアントへストリーミング返答
   ▼
 [AmiVoice API]     [Claude API]
   音声認識           応答生成
 ```
 
-### 技術スタック
+APIキーをブラウザに渡さないため、**Node.jsをプロキシサーバーとして使う**構成にします。
 
-- **バックエンド**: Node.js 20 + Express + `ws`ライブラリ
-- **フロントエンド**: バニラJS（フレームワークなし）
-- **音声認識**: AmiVoice API（WebSocketストリーミング）
-- **生成AI**: Claude claude-sonnet-4-6（claude-sonnet-4-6）
+---
+
+## AmiVoice WebSocket プロトコルの仕様
+
+実装前にプロトコルを正確に理解しておきます。
+
+### 接続エンドポイント
+
+```
+wss://acp-api.amivoice.com/v1/        # ログあり（デフォルト）
+wss://acp-api.amivoice.com/v1/nolog/  # ログなし
+```
+
+### コマンドフロー
+
+```
+クライアント → サーバー
+─────────────────────────────────────────────
+① s コマンド（テキストフレーム）
+  s <audioFormat> <grammarFileNames> authorization=<APPKEY>
+
+  例: s LSB16K -a-general authorization=YOUR_APP_KEY
+
+  ※ audioFormat は送信PCMの形式に合わせる
+     LSB16K = 16kHz リトルエンディアン（ブラウザのWebAudio APIはLE）
+     MSB16K = 16kHz ビッグエンディアン
+
+② 音声データ（バイナリフレーム）
+  先頭バイトを 0x70（'p' のASCIIコード）にし、
+  続けてPCM音声データをそのまま連結する
+
+③ e コマンド（テキストフレーム）
+  音声送信完了を通知
+  
+サーバー → クライアント（イベントパケット）
+─────────────────────────────────────────────
+s   sコマンド成功（この応答が来たら音声データ送信を開始できる）
+S   音声区間開始（VADが発話を検出）
+U   中間認識結果（発話中に逐次更新される JSON）
+A   最終認識結果（発話区間の確定テキスト JSON）← ここでClaude APIを呼ぶ
+E   音声区間終了
+e   eコマンド完了
+```
+
+### A/Uイベントのレスポンス形式
+
+AイベントとUイベントのメッセージは `A ` または `U ` に続いてJSONが入ります。
+
+```json
+A {
+  "text": "今日の東京の天気を教えてください",
+  "results": [
+    {
+      "text": "今日の東京の天気を教えてください",
+      "tokens": [
+        { "written": "今日", "starttime": 0,   "endtime": 320,  "confidence": 0.98 },
+        { "written": "の",   "starttime": 320,  "endtime": 400,  "confidence": 0.99 },
+        { "written": "東京", "starttime": 400,  "endtime": 720,  "confidence": 0.97 }
+      ],
+      "starttime": 0,
+      "endtime": 2100
+    }
+  ],
+  "utteranceid": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
+  "code": "",
+  "message": ""
+}
+```
+
+**UイベントはAイベントの前に複数回届く中間結果**なので、UIのリアルタイム表示には使いますがAI呼び出しのトリガーにはしません。
 
 ---
 
 ## 実装
 
-### 1. 環境準備
+### 環境準備
 
 ```bash
 mkdir voice-assistant && cd voice-assistant
@@ -80,17 +149,14 @@ npm init -y
 npm install express ws @anthropic-ai/sdk dotenv
 ```
 
-`.env`ファイルを作成します。
-
 ```env
+# .env
 AMIVOICE_APP_KEY=your_amivoice_app_key
 ANTHROPIC_API_KEY=your_anthropic_api_key
 PORT=3000
 ```
 
-AmiVoice APIキーは[ACP（Advanced Media Cloud Platform）](https://acp.amivoice.com/)のコンソールから取得できます。
-
-### 2. サーバー実装（`server.js`）
+### サーバー実装（`server.js`）
 
 ```javascript
 import express from 'express';
@@ -102,121 +168,121 @@ import 'dotenv/config';
 const app = express();
 const server = createServer(app);
 const wss = new WebSocketServer({ server, path: '/ws' });
-
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
-// 会話履歴（セッションごとに管理）
-const sessions = new Map();
+// ログあり: wss://acp-api.amivoice.com/v1/
+// ログなし: wss://acp-api.amivoice.com/v1/nolog/
+const AMIVOICE_WS_URL = 'wss://acp-api.amivoice.com/v1/nolog/';
 
-// AmiVoice WebSocket エンドポイント
-const AMIVOICE_WS_URL = 'wss://acp-api.amivoice.com/v1/websocket';
+const sessions = new Map();
 
 wss.on('connection', (clientWs) => {
   const sessionId = crypto.randomUUID();
-  sessions.set(sessionId, { history: [], amiWs: null });
+  const session = { history: [], amiWs: null, amiReady: false };
+  sessions.set(sessionId, session);
 
-  console.log(`[${sessionId}] Client connected`);
-
-  // AmiVoice への接続を確立
+  // AmiVoice への WebSocket 接続
   const amiWs = new WebSocket(AMIVOICE_WS_URL);
-  sessions.get(sessionId).amiWs = amiWs;
+  session.amiWs = amiWs;
 
   amiWs.on('open', () => {
-    // 認識設定を送信（grammarFileNames で認識エンジンを選択）
-    const config = [
-      'S',                          // コマンド: Start
-      `-a ${process.env.AMIVOICE_APP_KEY}`,
-      '-e utf-8',
-      '-l 16k',                     // サンプリングレート 16kHz
-      '-g -a-general',              // 汎用日本語モデル
-    ].join(' ');
-
-    amiWs.send(config);
-    console.log(`[${sessionId}] AmiVoice connected`);
+    // s コマンド送信: s <audioFormat> <grammarFileNames> authorization=<APPKEY>
+    // LSB16K = 16kHz リトルエンディアン（Web Audio API の出力形式に合わせる）
+    const sCommand = `s LSB16K -a-general authorization=${process.env.AMIVOICE_APP_KEY}`;
+    amiWs.send(sCommand);
   });
 
-  // AmiVoice からの認識結果を処理
-  amiWs.on('message', async (data) => {
-    const text = data.toString();
+  amiWs.on('message', async (raw) => {
+    const text = raw.toString();
 
-    // 'U' = 確定テキスト, 'S' = 途中テキスト
-    if (text.startsWith('U\t')) {
-      const utterance = text.split('\t').slice(2).join('\t').trim();
-      if (!utterance) return;
-
-      console.log(`[${sessionId}] Recognized: ${utterance}`);
-
-      // 認識テキストをクライアントに通知
-      clientWs.send(JSON.stringify({ type: 'recognized', text: utterance }));
-
-      // Claude で応答生成
-      await generateResponse(sessionId, utterance, clientWs);
-    } else if (text.startsWith('S\t')) {
-      // 途中認識テキストをリアルタイムで表示
-      const partial = text.split('\t').slice(2).join('\t').trim();
-      if (partial) {
-        clientWs.send(JSON.stringify({ type: 'partial', text: partial }));
-      }
+    if (text === 's') {
+      // s コマンド成功 → 音声データ受け付け可能になった
+      session.amiReady = true;
+      clientWs.send(JSON.stringify({ type: 'ready' }));
+      return;
     }
+
+    if (text.startsWith('U ')) {
+      // 中間認識結果 → UIのリアルタイム表示に使う（AI呼び出しはしない）
+      try {
+        const json = JSON.parse(text.slice(2));
+        if (json.text) {
+          clientWs.send(JSON.stringify({ type: 'partial', text: json.text }));
+        }
+      } catch { /* ignore parse errors */ }
+      return;
+    }
+
+    if (text.startsWith('A ')) {
+      // 最終認識結果 → Claude API を呼び出す
+      try {
+        const json = JSON.parse(text.slice(2));
+        const utterance = json.text?.trim();
+        if (!utterance) return;
+
+        clientWs.send(JSON.stringify({ type: 'recognized', text: utterance }));
+        await generateResponse(sessionId, utterance, clientWs);
+      } catch (err) {
+        console.error(`[${sessionId}] Parse error:`, err.message);
+      }
+      return;
+    }
+
+    // S(音声区間開始) / E(音声区間終了) / e(eコマンド完了) は無視
   });
 
   amiWs.on('error', (err) => {
-    console.error(`[${sessionId}] AmiVoice error:`, err.message);
-    clientWs.send(JSON.stringify({ type: 'error', message: 'AmiVoice connection error' }));
+    console.error(`AmiVoice error [${sessionId}]:`, err.message);
+    clientWs.send(JSON.stringify({ type: 'error', message: 'AmiVoice error' }));
   });
 
-  // クライアントからの音声データを AmiVoice に中継
+  amiWs.on('close', () => {
+    session.amiReady = false;
+  });
+
+  // ブラウザからのメッセージを処理
   clientWs.on('message', (data) => {
-    if (amiWs.readyState === WebSocket.OPEN) {
-      if (typeof data === 'string') {
-        // テキストコマンド（開始/停止）
-        const msg = JSON.parse(data);
-        if (msg.type === 'start') {
-          amiWs.send('p');  // 音声入力開始
-        } else if (msg.type === 'stop') {
-          amiWs.send('e');  // 音声入力終了
+    if (!session.amiReady || amiWs.readyState !== WebSocket.OPEN) return;
+
+    if (Buffer.isBuffer(data)) {
+      // 音声PCMデータ: 先頭バイトを 0x70('p') にして AmiVoice へ転送
+      const frame = Buffer.concat([Buffer.from([0x70]), data]);
+      amiWs.send(frame);
+    } else {
+      // テキストコマンド: stop のみ受け付ける
+      try {
+        const msg = JSON.parse(data.toString());
+        if (msg.type === 'stop') {
+          amiWs.send('e');  // 音声送信終了を通知
         }
-      } else {
-        // バイナリ音声データをそのまま転送
-        amiWs.send(data);
-      }
+      } catch { /* ignore */ }
     }
   });
 
   clientWs.on('close', () => {
-    console.log(`[${sessionId}] Client disconnected`);
-    if (amiWs.readyState === WebSocket.OPEN) {
-      amiWs.close();
-    }
+    if (amiWs.readyState === WebSocket.OPEN) amiWs.close();
     sessions.delete(sessionId);
   });
 });
 
-// Claude API で応答をストリーミング生成
 async function generateResponse(sessionId, userText, clientWs) {
   const session = sessions.get(sessionId);
   if (!session) return;
 
-  // 会話履歴に追加
   session.history.push({ role: 'user', content: userText });
-
-  // 履歴が長くなりすぎないよう最新20件に制限
-  if (session.history.length > 20) {
-    session.history = session.history.slice(-20);
-  }
+  if (session.history.length > 20) session.history = session.history.slice(-20);
 
   clientWs.send(JSON.stringify({ type: 'ai_start' }));
 
   let fullResponse = '';
-
   try {
     const stream = await anthropic.messages.stream({
       model: 'claude-sonnet-4-6',
       max_tokens: 1024,
       system: `あなたは親切な音声アシスタントです。
-ユーザーの質問に簡潔かつ丁寧に日本語で答えてください。
-音声で読み上げることを前提に、箇条書きや記号は避け、
-自然な話し言葉で回答してください。`,
+ユーザーの質問に簡潔かつ丁寧な日本語で答えてください。
+回答は音声で読み上げることを前提に、箇条書き記号（・-）や
+コードブロックは避け、自然な話し言葉で記述してください。`,
       messages: session.history,
     });
 
@@ -225,29 +291,26 @@ async function generateResponse(sessionId, userText, clientWs) {
         chunk.type === 'content_block_delta' &&
         chunk.delta.type === 'text_delta'
       ) {
-        const token = chunk.delta.text;
-        fullResponse += token;
-        clientWs.send(JSON.stringify({ type: 'ai_token', text: token }));
+        fullResponse += chunk.delta.text;
+        clientWs.send(JSON.stringify({ type: 'ai_token', text: chunk.delta.text }));
       }
     }
 
-    // アシスタントの応答を履歴に追加
     session.history.push({ role: 'assistant', content: fullResponse });
     clientWs.send(JSON.stringify({ type: 'ai_end' }));
   } catch (err) {
-    console.error(`[${sessionId}] Claude error:`, err.message);
-    clientWs.send(JSON.stringify({ type: 'error', message: 'AI response error' }));
+    console.error(`Claude error [${sessionId}]:`, err.message);
+    clientWs.send(JSON.stringify({ type: 'error', message: 'AI error' }));
   }
 }
 
 app.use(express.static('public'));
-
 server.listen(process.env.PORT, () => {
-  console.log(`Server running at http://localhost:${process.env.PORT}`);
+  console.log(`http://localhost:${process.env.PORT}`);
 });
 ```
 
-### 3. フロントエンド実装（`public/index.html`）
+### フロントエンド実装（`public/index.html`）
 
 ```html
 <!DOCTYPE html>
@@ -257,39 +320,42 @@ server.listen(process.env.PORT, () => {
   <title>音声対話アシスタント</title>
   <style>
     body { font-family: sans-serif; max-width: 640px; margin: 40px auto; padding: 0 16px; }
-    #status { color: #666; font-size: 0.9em; margin-bottom: 8px; }
-    #transcript { min-height: 40px; padding: 12px; background: #f5f5f5; border-radius: 8px; color: #333; }
-    #response { min-height: 80px; padding: 12px; margin-top: 12px; background: #e8f4fd; border-radius: 8px; }
+    #status { color: #666; font-size: 0.9em; min-height: 1.4em; }
+    #transcript { padding: 12px; background: #f5f5f5; border-radius: 8px; min-height: 40px; }
+    #response   { padding: 12px; background: #e8f4fd; border-radius: 8px; min-height: 80px; margin-top: 12px; }
     button { padding: 12px 32px; font-size: 1rem; border-radius: 8px; border: none; cursor: pointer; margin-top: 16px; }
     #btn-start { background: #4CAF50; color: white; }
     #btn-stop  { background: #f44336; color: white; display: none; }
-    .partial { color: #999; font-style: italic; }
+    .partial   { color: #aaa; font-style: italic; }
   </style>
 </head>
 <body>
   <h1>🎙️ 音声対話アシスタント</h1>
-  <div id="status">待機中...</div>
-  <div id="transcript">（ここに認識テキストが表示されます）</div>
-  <div id="response">（ここにAIの返答が表示されます）</div>
-  <button id="btn-start">録音開始</button>
+  <div id="status">接続中...</div>
+  <div id="transcript">（認識テキストが表示されます）</div>
+  <div id="response">（AIの返答が表示されます）</div>
+  <button id="btn-start" disabled>録音開始</button>
   <button id="btn-stop">録音停止</button>
 
   <script>
     const ws = new WebSocket(`ws://${location.host}/ws`);
-    const statusEl = document.getElementById('status');
+    const statusEl    = document.getElementById('status');
     const transcriptEl = document.getElementById('transcript');
-    const responseEl = document.getElementById('response');
-    const btnStart = document.getElementById('btn-start');
-    const btnStop = document.getElementById('btn-stop');
+    const responseEl  = document.getElementById('response');
+    const btnStart    = document.getElementById('btn-start');
+    const btnStop     = document.getElementById('btn-stop');
 
-    let audioContext, mediaStream, processor;
+    let audioCtx, stream, processor;
 
-    // WebSocket メッセージ処理
     ws.onmessage = ({ data }) => {
       const msg = JSON.parse(data);
       switch (msg.type) {
+        case 'ready':
+          statusEl.textContent = '待機中（録音ボタンを押してください）';
+          btnStart.disabled = false;
+          break;
         case 'partial':
-          transcriptEl.innerHTML = `<span class="partial">${msg.text}...</span>`;
+          transcriptEl.innerHTML = `<span class="partial">${msg.text}…</span>`;
           break;
         case 'recognized':
           transcriptEl.textContent = msg.text;
@@ -310,215 +376,206 @@ server.listen(process.env.PORT, () => {
       }
     };
 
-    // 録音開始
     btnStart.addEventListener('click', async () => {
-      mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      audioContext = new AudioContext({ sampleRate: 16000 });
+      stream = await navigator.mediaDevices.getUserMedia({ audio: true });
 
-      const source = audioContext.createMediaStreamSource(mediaStream);
+      // AmiVoice は 16kHz 推奨。AudioContext のサンプリングレートを明示的に指定
+      audioCtx = new AudioContext({ sampleRate: 16000 });
+      const source = audioCtx.createMediaStreamSource(stream);
 
-      // ScriptProcessorNode で PCM データを取得（最新環境では AudioWorklet 推奨）
-      processor = audioContext.createScriptProcessor(4096, 1, 1);
+      // ScriptProcessorNode で PCM データを取得
+      // （モダン環境では AudioWorklet を推奨するが、ここではシンプルさを優先）
+      processor = audioCtx.createScriptProcessor(4096, 1, 1);
       processor.onaudioprocess = (e) => {
         const float32 = e.inputBuffer.getChannelData(0);
-        const int16 = convertToInt16(float32);
-        if (ws.readyState === WebSocket.OPEN) {
-          ws.send(int16.buffer);
+        // Float32 → Int16 変換（リトルエンディアン）
+        const int16 = new Int16Array(float32.length);
+        for (let i = 0; i < float32.length; i++) {
+          const s = Math.max(-1, Math.min(1, float32[i]));
+          int16[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
         }
+        // バイナリデータとして送信（サーバー側で 'p' プレフィックスを付ける）
+        ws.send(int16.buffer);
       };
-
       source.connect(processor);
-      processor.connect(audioContext.destination);
-
-      ws.send(JSON.stringify({ type: 'start' }));
+      processor.connect(audioCtx.destination);
 
       btnStart.style.display = 'none';
-      btnStop.style.display = 'inline-block';
-      statusEl.textContent = '録音中... 話しかけてください';
+      btnStop.style.display  = 'inline-block';
+      statusEl.textContent   = '録音中... 話しかけてください';
     });
 
-    // 録音停止
     btnStop.addEventListener('click', () => {
       ws.send(JSON.stringify({ type: 'stop' }));
       processor?.disconnect();
-      mediaStream?.getTracks().forEach(t => t.stop());
-      audioContext?.close();
+      stream?.getTracks().forEach(t => t.stop());
+      audioCtx?.close();
 
-      btnStop.style.display = 'none';
+      btnStop.style.display  = 'none';
       btnStart.style.display = 'inline-block';
-      statusEl.textContent = '待機中...';
+      statusEl.textContent   = '待機中...';
     });
-
-    // Float32 → Int16 変換（WebAudio API → PCM 変換）
-    function convertToInt16(float32Array) {
-      const int16 = new Int16Array(float32Array.length);
-      for (let i = 0; i < float32Array.length; i++) {
-        const s = Math.max(-1, Math.min(1, float32Array[i]));
-        int16[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
-      }
-      return int16;
-    }
   </script>
 </body>
 </html>
 ```
 
-### 4. 実行
+### 動作確認
 
 ```bash
 node --env-file=.env server.js
-# → http://localhost:3000 をブラウザで開く
+# ブラウザで http://localhost:3000 を開く
 ```
 
 ---
 
-## 実装のポイント
+## 実装のポイントと注意事項
 
-### AmiVoice WebSocket プロトコルの注意点
+### 1. s コマンドのフォーマットは厳密
 
-AmiVoiceのWebSocketプロトコルはやや独特で、最初につまずきやすい点が3つあります。
-
-**1. 接続コマンドのフォーマット**
-
-接続後に最初に送るのはJSONではなくスペース区切りの文字列です。
+sコマンドはスペース区切りのテキストフレームで、順序が固定されています。
 
 ```
-S -a {APP_KEY} -e utf-8 -l 16k -g -a-general
+s <audioFormat> <grammarFileNames> [key=value ...]
 ```
 
-`S` はセッション開始コマンドで、`-g` オプションの後に使用する音声認識エンジン（文法ファイル）を指定します。
+よくある間違いとして、フラグ形式（`-a`, `-l`など）を使いたくなりますが、AmiVoice APIはそれに対応していません。認証情報も `authorization=APPKEY` というキーバリュー形式です。
 
-**2. 音声データ送信タイミング**
+### 2. 音声フォーマットの指定
 
-設定コマンドを送った後、`p`（recognition start）コマンドを送ってから音声バイナリを流します。順序を誤ると認識が動きません。
+ブラウザの Web Audio API は x86/x64 環境ではリトルエンディアンのPCMを出力します。そのため audioFormat には `LSB16K` を指定します。`MSB16K`（ビッグエンディアン）を指定すると認識精度が著しく落ちます。
 
-```
-接続 → Sコマンド（設定）→ pコマンド（開始）→ 音声バイナリ → eコマンド（終了）
-```
+| audioFormat | バイト順 | サンプリングレート |
+|-------------|---------|-----------------|
+| LSB16K | LE（リトルエンディアン） | 16kHz |
+| MSB16K | BE（ビッグエンディアン） | 16kHz |
+| LSB8K  | LE | 8kHz |
+| MSB8K  | BE | 8kHz |
 
-**3. 認識結果のパース**
+### 3. 音声データ送信の形式
 
-認識結果はタブ区切りのテキストで返ってきます。
+音声データは**バイナリフレームの先頭バイトを `0x70`（'p' のASCIIコード）**にして送ります。サーバー実装では `Buffer.concat([Buffer.from([0x70]), pcmData])` の形で付加しています。
 
-```
-U\t{セグメントID}\t{認識テキスト}\t{信頼度}\t...
-```
+### 4. A イベントと U イベントの使い分け
 
-`U`が確定テキスト、`S`が途中結果です。2番目以降のタブ区切りフィールドが認識テキストになります。
+| イベント | 内容 | 用途 |
+|---------|------|------|
+| U | 中間認識結果（発話中に更新） | UIのリアルタイム表示 |
+| A | 最終認識結果（発話区間確定） | AIへの入力トリガー |
 
-### 会話の質を高める Claude のシステムプロンプト設計
+**AI呼び出しは必ずAイベント**をトリガーにします。Uイベントは途中結果なのでテキストが変わり続けます。
 
-音声対話では、テキストチャットとは異なる制約があります。
+### 5. 音声向けシステムプロンプトの設計
 
-```javascript
-system: `あなたは親切な音声アシスタントです。
-ユーザーの質問に簡潔かつ丁寧に日本語で答えてください。
-音声で読み上げることを前提に、箇条書きや記号は避け、
-自然な話し言葉で回答してください。`
-```
+音声で読み上げることを前提にすると、テキストチャット向けの回答形式をそのまま使うと違和感が生じます。
 
-**避けるべき表現**:
-- 「・」「-」などの箇条書き記号 → TTS（Text-to-Speech）で変な読まれ方をする
-- コードブロック → 音声では意味をなさない
-- 「①②③」などの番号記号 → 「まるいち」と読まれることがある
+避けるべき表現:
+- `・` `-` などの箇条書き記号
+- `①②③` などの丸数字
+- コードブロックやテーブル
+- `（括弧）` が多用された文体
 
-**推奨する表現**:
-- 「まず〜、次に〜、最後に〜」などの接続詞で列挙
-- 「〜ですね。〜ということになります。」のような自然な口語
-
-### レイテンシを下げる工夫
-
-ストリーミング認識と応答生成を組み合わせると、体感レイテンシを大幅に削減できます。
-
-```
-[音声入力]
-  ↓ 約200ms（AmiVoice途中認識）
-[中間テキスト表示]
-  ↓ 確定まで待つ
-[Claude API呼び出し]
-  ↓ 約300ms（初回トークン）
-[応答ストリーミング表示開始]
-```
-
-ユーザーの発話が終わってからClaude APIを呼ぶため、合計レイテンシは概ね1〜2秒程度です。さらに高速化したい場合は、途中認識テキスト（`S`コマンドの結果）をトリガーにして先行してClaude APIを呼び出す「投機的応答生成」も有効です。
+推奨する表現:
+- 「まず〜、次に〜、最後に〜」で列挙する
+- 「〜ですね。〜ということになります。」のような口語調
 
 ---
 
 ## 専門領域モデルへの切り替え
 
-AmiVoiceの強みは専門用語認識です。`-g`オプションのエンジンを変えるだけで対応領域を切り替えられます。
+grammarFileNamesを変えるだけで専門エンジンに切り替えられます。
 
 ```javascript
-// 医療現場向け
-'-g -a-medgeneral'
+// 汎用日本語
+const sCommand = `s LSB16K -a-general authorization=${APPKEY}`;
+
+// 医療・電子カルテ向け（医療用語・薬品名に強い）
+const sCommand = `s LSB16K -a-medgeneral authorization=${APPKEY}`;
+
+// コールセンター向け（電話音質に対応）
+const sCommand = `s LSB16K -a-callcenter authorization=${APPKEY}`;
 
 // 金融・ビジネス向け
-'-g -a-bizfinance'
-
-// コールセンター向け（電話音声）
-'-g -a-callcenter'
+const sCommand = `s LSB16K -a-bizfinance authorization=${APPKEY}`;
 ```
 
-例えば医療記録システムでは、「右季肋部痛（うみぎろくぶつう）」「狭心症（きょうしんしょう）」などが正確に認識されます。これを生成AIに渡すと、電子カルテの下書き生成や医療コードの提案など、専門的なアシストが可能になります。
+医療記録システムでは「右季肋部痛（うみぎろくぶつう）」「狭心症（きょうしんしょう）」などの専門用語が正確に認識されるようになり、そのまま Claude に渡すと電子カルテの下書き生成や SOAP ノート構造化が実現できます。
 
 ---
 
-## 発展的なアイデア
+## 発展的な機能
 
-本記事の構成を応用すると、以下のようなシステムに発展できます。
+### 話者ダイアライゼーション（話者分離）
 
-### 議事録自動生成システム
-
-話者分離オプション（`-S`）を使うと、複数人の発言を分けて認識できます。これをClaudeに渡せば「誰が何を言ったか」を含む構造化された議事録を自動生成できます。
+WebSocket/同期HTTPでは、`segmenterProperties` パラメータで話者分離を有効にできます。
 
 ```javascript
-// 話者分離を有効化
-const config = `S -a ${APP_KEY} -e utf-8 -l 16k -g -a-general -S 2`;
-//                                                              ↑ 話者数（最大指定）
+// sコマンドに追加
+const sCommand = [
+  `s LSB16K -a-general`,
+  `authorization=${APPKEY}`,
+  `segmenterProperties=useDiarizer=1`,          // 話者分離ON
+  `diarizationMinSpeaker=2`,                     // 最小話者数
+  `diarizationMaxSpeaker=5`,                     // 最大話者数
+].join(' ');
 ```
 
-### カスタムボキャブラリーとの組み合わせ
+レスポンスの `results[0].tokens` に `speakerId` が付与されます。これを使うと「話者Aが言ったこと」「話者Bが言ったこと」を分けて Claude に渡し、構造化した議事録を生成できます。
 
-AmiVoiceはユーザー辞書（カスタムボキャブラリー）登録をサポートしています。社内固有の製品名やプロジェクト名を登録することで、認識精度をさらに高められます。
+### ユーザー辞書（カスタム語彙）
+
+社内固有の製品名・プロジェクト名はユーザー辞書APIで登録することで認識精度を上げられます。
 
 ```bash
-# カスタムボキャブラリー登録（REST API）
-curl -X POST https://acp-api.amivoice.com/v1/vocabularyRegistrations \
-  -H "Authorization: Bearer ${APP_KEY}" \
+# 単語登録 REST API
+curl -X PUT "https://acp-api.amivoice.com/v1/profile-words" \
+  -H "Authorization: Bearer ${APPKEY}" \
   -H "Content-Type: application/json" \
-  -d '{"words": [{"displayString": "プロジェクトフェニックス"}]}'
+  -d '{
+    "profileId": "my-project",
+    "words": [
+      {
+        "written":  "プロジェクトフェニックス",
+        "spoken":   "ぷろじぇくとふぇにっくす",
+        "class":    "固有名詞"
+      }
+    ]
+  }'
 ```
 
-### Web Speech API とのフォールバック
+sコマンドで `profileId=my-project` を指定すると登録語が有効になります。ユーザーごとに異なる辞書を持たせることも可能です。
 
-AmiVoice APIが利用できない環境向けに、ブラウザ標準の`SpeechRecognition`（Web Speech API）をフォールバックとして実装しておくと、可用性が上がります。
+### 感情解析（非同期HTTPのみ）
 
-```javascript
-const recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-const useAmiVoice = !!process.env.AMIVOICE_APP_KEY;
-```
+非同期HTTP APIには、音声から感情（喜び・怒り・ストレスなど20パラメータ）を分析するオプションがあります。コールセンターの応対品質評価や、社員のメンタル状態モニタリングなどに活用されています。感情解析はリアルタイムWebSocketではなくバッチ処理での利用になります。
 
 ---
 
 ## まとめ
 
-AmiVoice APIとClaude APIを組み合わせることで、次の効果が得られました。
+AmiVoice API × Claude API で構築した音声対話システムで解決できた課題を整理します。
 
-| 課題 | 解決策 |
-|------|--------|
-| 日本語専門用語の誤認識 | AmiVoice専門領域モデル |
-| 応答の不自然さ（箇条書き等）| 音声向けシステムプロンプト |
-| レイテンシの長さ | WebSocketストリーミング + SSE |
-| 会話の文脈喪失 | サーバー側の会話履歴管理 |
+| 課題 | 対策 |
+|------|------|
+| 日本語専門用語の誤認識 | AmiVoice専門領域モデルに切り替え |
+| 応答の不自然さ（箇条書きなど）| 音声前提のシステムプロンプト設計 |
+| 認識中の無応答感 | Uイベントで中間テキストをリアルタイム表示 |
+| APIキーの漏洩リスク | Node.jsプロキシでブラウザから隠蔽 |
+| バイトオーダー起因の誤認識 | LE環境では LSB16K を明示的に指定 |
 
-特に医療・法律・金融など専門用語が多い領域で、汎用エンジンからAmiVoiceへの乗り換え効果は大きく、生成AIへの入力品質が向上することで最終的な応答品質も改善します。
+特に注意が必要なのは**sコマンドの正確なフォーマット**と**audioFormat（LE/BE）の指定**です。この2点を間違えると認識が全く動かないか、認識精度が著しく低下します。
 
-音声インターフェースはキーボードに比べて直感的で、ハンズフリー操作を必要とする現場（工場、医療、物流）で特に有効です。本記事の実装をベースに、ぜひ自分のユースケースに合わせたカスタマイズを試してみてください。
+ハンズフリー操作が必要な工場・医療・物流の現場では、キーボードが使えない状況でも音声でAIに質問できるインターフェースが実用的です。本記事の実装をベースに、専門領域モデルや話者分離など用途に合わせた拡張をぜひ試してみてください。
 
 ---
 
-## 参考リンク
+## 参考
 
-- [AmiVoice API ドキュメント](https://docs.amivoice.com/amivoice-api/)
+- [AmiVoice API マニュアル](https://docs.amivoice.com/amivoice-api/manual/)
+- [WebSocket インターフェース概要](https://docs.amivoice.com/amivoice-api/manual/reference/websocket/)
+- [sコマンドパケット仕様](https://docs.amivoice.com/amivoice-api/manual/reference/websocket/command/s-command-packet/)
+- [音声認識エンジン一覧](https://docs.amivoice.com/en/amivoice-api/manual/engines/)
+- [話者ダイアライゼーション](https://docs.amivoice.com/amivoice-api/manual/user-guide/function/speaker-diarization/)
+- [ユーザー辞書API](https://docs.amivoice.com/en/amivoice-api/manual/user-dictionary-api/)
+- [AmiVoice API クライアントライブラリ（GitHub）](https://github.com/advanced-media-inc/amivoice-api-client-library)
 - [Anthropic Claude API リファレンス](https://docs.anthropic.com/en/api/getting-started)
-- [Web Audio API - MDN](https://developer.mozilla.org/ja/docs/Web/API/Web_Audio_API)
