@@ -14,7 +14,7 @@ published_at: "2026-06-02 12:00"
 インストール自体は意外と簡単でしたが、**日本語入力**・**画面サイズの自動調整**・**共有フォルダの設定**などは少し手間がかかったので、その辺りも含めてまとめておきます。
 
 :::message
-環境: MacBook Air M2 / UTM v4.x / ParrotOS Security 6.x（ARM64）
+環境: MacBook Air M5 / UTM v4.x / ParrotOS Security 6.x（ARM64）
 :::
 
 ---
