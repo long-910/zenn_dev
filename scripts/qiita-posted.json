@@ -138,5 +138,12 @@
     "title": "MacBook M5 に John the Ripper をインストールして使ってみた",
     "posted_at": "2026-06-03T12:38:41Z",
     "updated_at": "2026-06-03T12:38:41Z"
+  },
+  "2026-06-05-cve-2026-49975-http2-bomb-ai.md": {
+    "url": "https://qiita.com/long-910/items/76779fc1d8602dab73b3",
+    "item_id": "76779fc1d8602dab73b3",
+    "title": "CVE-2026-49975「HTTP/2 Bomb」をわかりやすく解説——AIが人間より先に気づいた脆弱性",
+    "posted_at": "2026-06-05T12:33:14Z",
+    "updated_at": "2026-06-05T12:33:14Z"
   }
 }
