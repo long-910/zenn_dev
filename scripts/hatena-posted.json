@@ -117,5 +117,12 @@
     "title": "MacBook M5 に Hashcat をインストールして使ってみた",
     "posted_at": "2026-06-07T13:52:49Z",
     "updated_at": "2026-06-07T13:52:49Z"
+  },
+  "2026-06-08-sqlmap-introduction.md": {
+    "url": "https://long910.hatenablog.com/entry/2026/06/08/221547",
+    "entry_url": "https://blog.hatena.ne.jp/long910/long910.hatenablog.com/atom/entry/14945776032040273352",
+    "title": "sqlmap を使って SQL インジェクションを学んでみた",
+    "posted_at": "2026-06-08T13:15:48Z",
+    "updated_at": "2026-06-08T13:15:48Z"
   }
 }
