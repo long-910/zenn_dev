@@ -159,5 +159,12 @@
     "title": "sqlmap を使って SQL インジェクションを学んでみた",
     "posted_at": "2026-06-08T13:15:50Z",
     "updated_at": "2026-06-08T13:15:50Z"
+  },
+  "2026-06-09-ai-security-defense.md": {
+    "url": "https://qiita.com/long-910/items/84904570971bdae83e3e",
+    "item_id": "84904570971bdae83e3e",
+    "title": "AIはサイバー防御をどう変えているのか調べてみた——2026年の実態",
+    "posted_at": "2026-06-09T13:35:53Z",
+    "updated_at": "2026-06-09T13:35:53Z"
   }
 }
