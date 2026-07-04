@@ -159,5 +159,12 @@
     "title": "Jujutsuとは？ Gitとの関係とGitHub連携をわかりやすく解説",
     "posted_at": "2026-06-28T23:19:50Z",
     "updated_at": "2026-06-28T23:19:50Z"
+  },
+  "2026-07-04-owasp-zap.md": {
+    "url": "https://long910.hatenablog.com/entry/2026/07/04/124029",
+    "entry_url": "https://blog.hatena.ne.jp/long910/long910.hatenablog.com/atom/entry/14945776032049722334",
+    "title": "OWASP ZAP を使った Web アプリ診断——スパイダーリングから脆弱性スキャンまで",
+    "posted_at": "2026-07-04T03:40:30Z",
+    "updated_at": "2026-07-04T03:40:30Z"
   }
 }
