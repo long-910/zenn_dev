@@ -201,5 +201,12 @@
     "title": "Jujutsuとは？ Gitとの関係とGitHub連携をわかりやすく解説",
     "posted_at": "2026-06-28T23:19:47Z",
     "updated_at": "2026-06-28T23:19:47Z"
+  },
+  "2026-07-04-owasp-zap.md": {
+    "url": "https://qiita.com/long-910/items/c69a3ac0365692878cae",
+    "item_id": "c69a3ac0365692878cae",
+    "title": "OWASP ZAP を使った Web アプリ診断——スパイダーリングから脆弱性スキャンまで",
+    "posted_at": "2026-07-04T03:40:31Z",
+    "updated_at": "2026-07-04T03:40:31Z"
   }
 }
