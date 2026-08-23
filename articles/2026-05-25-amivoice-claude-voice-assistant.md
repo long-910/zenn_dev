@@ -543,9 +543,8 @@ curl -sS -X POST "https://acp-api.amivoice.com/profilewords/-a-general/my-projec
   -d '{
     "profilewords": [
       {
-        "written":   "プロジェクトフェニックス",
-        "spoken":    "ぷろじぇくとふぇにっくす",
-        "classname": "固有名詞"
+        "written": "プロジェクトフェニックス",
+        "spoken":  "ぷろじぇくとふぇにっくす"
       }
     ]
   }'
@@ -598,4 +597,4 @@ AmiVoice API × Claude API で構築した音声対話システムで解決で�
   - 接続エンジン名を実在するもの（`-a-medical` / `-a-medical-input` / `-a-bizinsurance` など）に修正。電話音質（8kHz）は汎用 `-a-general` で扱える旨を補足
   - 話者分離パラメータを WebSocket 仕様（`segmenterProperties` 内の `diarizerAlpha` / `diarizerTransitionBias`）に修正。`diarizationMinSpeaker` / `diarizationMaxSpeaker` は非同期HTTP専用である旨を追記
   - 話者ラベルのフィールド名を `speakerId` から `label`（値は `speaker0` / `speaker1` 形式）に修正
-  - ユーザー辞書APIのエンドポイント・HTTPメソッド・リクエストボディ（キーを `profilewords`、`class` → `classname`）を公式仕様に修正
+  - ユーザー辞書APIのエンドポイント・HTTPメソッド（POST）・リクエストボディ（キーを `profilewords`、各要素は `written` / `spoken`）を公式仕様に修正
