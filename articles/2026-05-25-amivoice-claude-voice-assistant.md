@@ -486,20 +486,23 @@ s <audioFormat> <grammarFileNames> [key=value ...]
 grammarFileNamesを変えるだけで専門エンジンに切り替えられます。
 
 ```javascript
-// 汎用日本語
+// 汎用日本語（会話向け）
 const sCommand = `s LSB16K -a-general authorization=${APPKEY}`;
 
-// 医療・電子カルテ向け（医療用語・薬品名に強い）
-const sCommand = `s LSB16K -a-medgeneral authorization=${APPKEY}`;
+// 医療向け（会議・カンファレンスなど、医療用語・薬品名に強い）
+const sCommand = `s LSB16K -a-medical authorization=${APPKEY}`;
 
-// コールセンター向け（電話音質に対応）
-const sCommand = `s LSB16K -a-callcenter authorization=${APPKEY}`;
+// 医療・電子カルテ向け（口述入力に最適化）
+const sCommand = `s LSB16K -a-medical-input authorization=${APPKEY}`;
 
 // 金融・ビジネス向け
 const sCommand = `s LSB16K -a-bizfinance authorization=${APPKEY}`;
+
+// 保険向け
+const sCommand = `s LSB16K -a-bizinsurance authorization=${APPKEY}`;
 ```
 
-医療記録システムでは「右季肋部痛（うみぎろくぶつう）」「狭心症（きょうしんしょう）」などの専門用語が正確に認識されるようになり、そのまま Claude に渡すと電子カルテの下書き生成や SOAP ノート構造化が実現できます。
+利用できる接続エンジン名は公式の[音声認識エンジン一覧](https://docs.amivoice.com/en/amivoice-api/manual/engines/)で確認できます。医療記録システムでは「右季肋部痛（うみぎろくぶつう）」「狭心症（きょうしんしょう）」などの専門用語が正確に認識されるようになり、そのまま Claude に渡すと電子カルテの下書き生成や SOAP ノート構造化が実現できます。
 
 ---
 
@@ -507,37 +510,42 @@ const sCommand = `s LSB16K -a-bizfinance authorization=${APPKEY}`;
 
 ### 話者ダイアライゼーション（話者分離）
 
-WebSocket/同期HTTPでは、`segmenterProperties` パラメータで話者分離を有効にできます。
+WebSocket/同期HTTPでは、`segmenterProperties` パラメータで話者分離を有効にできます。`segmenterProperties` はスペース区切りの `key=value` をまとめて 1 つの値として渡します。
 
 ```javascript
 // sコマンドに追加
 const sCommand = [
   `s LSB16K -a-general`,
   `authorization=${APPKEY}`,
-  `segmenterProperties=useDiarizer=1`,          // 話者分離ON
-  `diarizationMinSpeaker=2`,                     // 最小話者数
-  `diarizationMaxSpeaker=5`,                     // 最大話者数
+  // useDiarizer=1 で話者分離ON、diarizerAlpha / diarizerTransitionBias で調整
+  `segmenterProperties="useDiarizer=1 diarizerAlpha=1e-20 diarizerTransitionBias=1e-10"`,
 ].join(' ');
 ```
 
-レスポンスの `results[0].tokens` に `speakerId` が付与されます。これを使うと「話者Aが言ったこと」「話者Bが言ったこと」を分けて Claude に渡し、構造化した議事録を生成できます。
+- `diarizerAlpha`: 新しい話者の出現しやすさを調整（値が大きいほど新話者が出現しやすい）
+- `diarizerTransitionBias`: 話者の切り替わりやすさを調整（値が大きいほど切り替わりやすい）
+
+なお `diarizationMinSpeaker` / `diarizationMaxSpeaker`（最小・最大話者数の指定）は**非同期HTTPインターフェース専用**のパラメータで、WebSocket/同期HTTPでは利用できません。
+
+レスポンスの各トークンには話者ラベルが `label` フィールドとして付与され、値は `speaker0`・`speaker1` のような形式になります。これを使うと「話者Aが言ったこと」「話者Bが言ったこと」を分けて Claude に渡し、構造化した議事録を生成できます。
 
 ### ユーザー辞書（カスタム語彙）
 
 社内固有の製品名・プロジェクト名はユーザー辞書APIで登録することで認識精度を上げられます。
 
+エンドポイントは `https://acp-api.amivoice.com/profilewords/{接続エンジン名}/{profile_id}` の形式で、接続エンジン名とプロファイルIDをパスに含めます。リクエストボディのキーは `profilewords` で、登録する単語すべてを配列で渡します（追記ではなく毎回すべての単語をセットする点に注意）。
+
 ```bash
-# 単語登録 REST API
-curl -X PUT "https://acp-api.amivoice.com/v1/profile-words" \
+# 単語登録 REST API（POST）
+curl -sS -X POST "https://acp-api.amivoice.com/profilewords/-a-general/my-project" \
   -H "Authorization: Bearer ${APPKEY}" \
   -H "Content-Type: application/json" \
   -d '{
-    "profileId": "my-project",
-    "words": [
+    "profilewords": [
       {
-        "written":  "プロジェクトフェニックス",
-        "spoken":   "ぷろじぇくとふぇにっくす",
-        "class":    "固有名詞"
+        "written":   "プロジェクトフェニックス",
+        "spoken":    "ぷろじぇくとふぇにっくす",
+        "classname": "固有名詞"
       }
     ]
   }'
