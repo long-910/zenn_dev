@@ -502,7 +502,7 @@ const sCommand = `s LSB16K -a-bizfinance authorization=${APPKEY}`;
 const sCommand = `s LSB16K -a-bizinsurance authorization=${APPKEY}`;
 ```
 
-利用できる接続エンジン名は公式の[音声認識エンジン一覧](https://docs.amivoice.com/en/amivoice-api/manual/engines/)で確認できます。医療記録システムでは「右季肋部痛（うみぎろくぶつう）」「狭心症（きょうしんしょう）」などの専門用語が正確に認識されるようになり、そのまま Claude に渡すと電子カルテの下書き生成や SOAP ノート構造化が実現できます。
+利用できる接続エンジン名は公式の[音声認識エンジン一覧](https://docs.amivoice.com/en/amivoice-api/manual/engines/)で確認できます。なお、コールセンターの通話録音のような**電話音質（8kHz）の音声**も汎用の `-a-general` で扱えます（この場合 audioFormat は `LSB8K` / `MSB8K` を指定します）。医療記録システムでは「右季肋部痛（うみぎろくぶつう）」「狭心症（きょうしんしょう）」などの専門用語が正確に認識されるようになり、そのまま Claude に渡すと電子カルテの下書き生成や SOAP ノート構造化が実現できます。
 
 ---
 
@@ -583,8 +583,10 @@ AmiVoice API × Claude API で構築した音声対話システムで解決で�
 - [WebSocket インターフェース概要](https://docs.amivoice.com/amivoice-api/manual/reference/websocket/)
 - [sコマンドパケット仕様](https://docs.amivoice.com/amivoice-api/manual/reference/websocket/command/s-command-packet/)
 - [音声認識エンジン一覧](https://docs.amivoice.com/en/amivoice-api/manual/engines/)
-- [話者ダイアライゼーション](https://docs.amivoice.com/amivoice-api/manual/user-guide/function/speaker-diarization/)
-- [ユーザー辞書API](https://docs.amivoice.com/en/amivoice-api/manual/user-dictionary-api/)
+- [認識結果のフォーマット](https://docs.amivoice.com/amivoice-api/manual/result-format)
+- [話者ダイアライゼーション](https://docs.amivoice.com/amivoice-api/manual/speaker-diarization)
+- [リクエストパラメータ](https://docs.amivoice.com/amivoice-api/manual/request-parameters)
+- [ユーザー辞書](https://docs.amivoice.com/amivoice-api/manual/user-dictionary)
 - [AmiVoice API クライアントライブラリ（GitHub）](https://github.com/advanced-media-inc/amivoice-api-client-library)
 - [Anthropic Claude API リファレンス](https://docs.anthropic.com/en/api/getting-started)
 
@@ -593,7 +595,7 @@ AmiVoice API × Claude API で構築した音声対話システムで解決で�
 ## 更新履歴
 
 - **2026-08-23**: AmiVoice API 公式からのご指摘を受け、公式ドキュメントを確認のうえ以下を訂正しました。
-  - 接続エンジン名を実在するもの（`-a-medical` / `-a-medical-input` / `-a-bizinsurance` など）に修正
+  - 接続エンジン名を実在するもの（`-a-medical` / `-a-medical-input` / `-a-bizinsurance` など）に修正。電話音質（8kHz）は汎用 `-a-general` で扱える旨を補足
   - 話者分離パラメータを WebSocket 仕様（`segmenterProperties` 内の `diarizerAlpha` / `diarizerTransitionBias`）に修正。`diarizationMinSpeaker` / `diarizationMaxSpeaker` は非同期HTTP専用である旨を追記
   - 話者ラベルのフィールド名を `speakerId` から `label`（値は `speaker0` / `speaker1` 形式）に修正
   - ユーザー辞書APIのエンドポイント・HTTPメソッド・リクエストボディ（キーを `profilewords`、`class` → `classname`）を公式仕様に修正
