@@ -6,6 +6,7 @@ on:
       - main
     paths:
       - "articles/**"
+      - "images/**"
       - ".github/sync-platforms.json"
 
 jobs:
@@ -107,9 +108,9 @@ jobs:
                   next;
                 }
                 if ($0 ~ /^emoji:/) {
-                  print "img_path: /assets/img/logos";
+                  # img_path は本文の画像パスにも付与されるため使わず、フルパスで指定する
                   print "image:";
-                  print "  path: logo-only.svg";
+                  print "  path: /assets/img/logos/logo-only.svg";
                   print "  width: 100%";
                   print "  height: 100%";
                   print "  alt: Zenn";
@@ -160,11 +161,17 @@ jobs:
             fi
           done
 
+          # 本文から参照される画像 (/images/...) を同じパスで同期
+          if [ -d images ]; then
+            mkdir -p target/images
+            cp -r images/. target/images/
+          fi
+
       - name: Commit and push changes
         run: |
           cd target
           git config --global user.name "long-910"
           git config --global user.email "7323488+long-910@users.noreply.github.com"
-          git add _posts/
+          git add _posts/ images/
           git commit -m "Sync articles from Zenn repository" || echo "No changes to commit"
           git push
