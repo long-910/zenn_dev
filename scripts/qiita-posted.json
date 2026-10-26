@@ -208,5 +208,12 @@
     "title": "OWASP ZAP を使った Web アプリ診断——スパイダーリングから脆弱性スキャンまで",
     "posted_at": "2026-07-04T03:40:31Z",
     "updated_at": "2026-07-04T03:40:31Z"
+  },
+  "2026-10-27-sysreptor.md": {
+    "url": "https://qiita.com/long-910/items/03e8b7e9dc3ba38e9b6d",
+    "item_id": "03e8b7e9dc3ba38e9b6d",
+    "title": "SysReptor 入門——ペンテストレポートを HTML/Markdown で書いて PDF に出力する",
+    "posted_at": "2026-10-26T15:00:42Z",
+    "updated_at": "2026-10-26T15:00:42Z"
   }
 }
