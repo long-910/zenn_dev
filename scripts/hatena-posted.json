@@ -173,5 +173,12 @@
     "title": "SysReptor 入門——ペンテストレポートを HTML/Markdown で書いて PDF に出力する",
     "posted_at": "2026-10-26T15:00:42Z",
     "updated_at": "2026-10-26T15:00:42Z"
+  },
+  "2026-10-29-lm-studio.md": {
+    "url": "https://long910.hatenablog.com/entry/2026/10/30/000706",
+    "entry_url": "https://blog.hatena.ne.jp/long910/long910.hatenablog.com/atom/entry/14729835035330981585",
+    "title": "LM Studio の使い方を図で整理した——モデル選びから API サーバー・CLI まで",
+    "posted_at": "2026-10-29T15:07:07Z",
+    "updated_at": "2026-10-29T15:07:07Z"
   }
 }
