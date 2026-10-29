@@ -46,6 +46,7 @@ ARTICLES_DIR = REPO_ROOT / "articles"
 ZENN_USER = "long910"
 PLATFORM_NAME = "qiita"
 SYNC_PLATFORMS_FILE = REPO_ROOT / ".github" / "sync-platforms.json"
+IMAGE_BASE_URL = "https://raw.githubusercontent.com/long-910/zenn_dev/main/images"
 
 
 def is_excluded(filename: str) -> bool:
@@ -83,9 +84,12 @@ def parse_article(filepath: Path) -> tuple[dict, str]:
 def convert_zenn_to_qiita(content: str) -> str:
     """Zenn固有の記法をQiita互換のMarkdownに変換する"""
 
+    # 本文の画像 (/images/...) を GitHub 上の絶対URLに変換
+    content = re.sub(r"\]\(/images/", f"]({IMAGE_BASE_URL}/", content)
+
     # Claude Codeメッセージブロックを削除
     content = re.sub(
-        r":::message\n.*?Claude Code.*?:::\n?",
+        r":::message\n(?:(?!:::).)*?Claude Code(?:(?!:::).)*?:::\n?",
         "",
         content,
         flags=re.DOTALL

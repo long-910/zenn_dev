@@ -80,7 +80,7 @@ def parse_article(filepath: Path) -> tuple[dict, str]:
 def clean_zenn_content(content: str) -> str:
     """Zenn固有の記法をMarkdownに変換する"""
     content = re.sub(
-        r":::message\n.*?Claude Code.*?:::\n?",
+        r":::message\n(?:(?!:::).)*?Claude Code(?:(?!:::).)*?:::\n?",
         "",
         content,
         flags=re.DOTALL

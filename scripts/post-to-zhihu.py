@@ -63,6 +63,7 @@ ARTICLES_DIR = REPO_ROOT / "articles"
 ZENN_USER = "long910"
 PLATFORM_NAME = "zhihu"
 SYNC_PLATFORMS_FILE = REPO_ROOT / ".github" / "sync-platforms.json"
+IMAGE_BASE_URL = "https://raw.githubusercontent.com/long-910/zenn_dev/main/images"
 
 ZHIHU_HOME_URL = "https://www.zhihu.com"
 ZHIHU_LOGIN_URL = "https://www.zhihu.com/signin"
@@ -103,8 +104,12 @@ def parse_article(filepath: Path) -> tuple[dict, str]:
 
 def clean_zenn_content(content: str) -> str:
     """Zenn固有の記法をMarkdownに変換する"""
+
+    # 本文の画像 (/images/...) を GitHub 上の絶対URLに変換
+    content = re.sub(r"\]\(/images/", f"]({IMAGE_BASE_URL}/", content)
+
     content = re.sub(
-        r":::message\n.*?Claude Code.*?:::\n?",
+        r":::message\n(?:(?!:::).)*?Claude Code(?:(?!:::).)*?:::\n?",
         "",
         content,
         flags=re.DOTALL
